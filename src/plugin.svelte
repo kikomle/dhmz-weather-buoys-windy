@@ -108,11 +108,7 @@
         </div>
 
         <footer class="observation-card__footer">
-            <span>
-                {readingsGeneratedAt
-                    ? `Wave reading updated ${formatCheckedAt(readingsGeneratedAt)}`
-                    : 'Wave readings refresh every 10 minutes'}
-            </span>
+            <span>{formatWaveReadingStatus(selectedReading)}</span>
             <a href={selectedBuoy.chartUrl} target="_blank" rel="noreferrer">Open full chart ↗</a>
         </footer>
     </article>
@@ -147,6 +143,11 @@
         hour: '2-digit',
         minute: '2-digit',
     });
+    const observedAtFormatter = new Intl.DateTimeFormat(undefined, {
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
 
     let selectedBuoy = buoys[0];
     let chartVersion = Date.now();
@@ -174,10 +175,24 @@
 
     const formatWaveHeight = (reading: WaveReading | null | undefined, compact = false) => {
         if (reading?.status !== 'ok' || reading.waveHeightM === null) {
-            return compact ? '— m' : 'No data';
+            return compact ? '— m' : reading?.status === 'stale' ? 'Stale' : 'No data';
         }
 
         return `${reading.waveHeightM.toFixed(1)}${compact ? '' : ' '}m`;
+    };
+
+    const formatWaveReadingStatus = (reading: WaveReading | null | undefined) => {
+        if (reading?.observedAt) {
+            const observedAt = new Date(reading.observedAt);
+            const label = observedAtFormatter.format(observedAt);
+            return reading.status === 'ok'
+                ? `Wave point observed ${label}`
+                : `No current wave point · last observed ${label}`;
+        }
+
+        return readingsGeneratedAt
+            ? `No wave data in chart checked ${formatCheckedAt(readingsGeneratedAt)}`
+            : 'Wave readings refresh every 10 minutes';
     };
 
     const waveReadingFor = (buoyId: string) => waveReadings[buoyId];
@@ -224,15 +239,22 @@
         buoys.forEach(buoy => {
             const reading = payload.buoys?.[buoy.id];
             const height = reading?.waveHeightM;
+            const observedAt = reading?.observedAt;
             const isValidHeight =
                 typeof height === 'number' && Number.isFinite(height) && height >= 0 && height <= 25;
+            const isValidObservedAt =
+                typeof observedAt === 'string' && !Number.isNaN(new Date(observedAt).getTime());
 
             normalized[buoy.id] =
-                reading?.status === 'ok' && isValidHeight
-                    ? { waveHeightM: height, status: 'ok' }
+                reading?.status === 'ok' && isValidHeight && isValidObservedAt
+                    ? { waveHeightM: height, status: 'ok', observedAt }
                     : {
                           waveHeightM: null,
-                          status: reading?.status === 'no-data' ? 'no-data' : 'error',
+                          status:
+                              reading?.status === 'no-data' || reading?.status === 'stale'
+                                  ? reading.status
+                                  : 'error',
+                          observedAt: isValidObservedAt ? observedAt : null,
                       };
         });
 

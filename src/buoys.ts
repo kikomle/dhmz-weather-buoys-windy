@@ -9,7 +9,8 @@ export interface Buoy {
 
 export interface WaveReading {
     waveHeightM: number | null;
-    status: 'ok' | 'no-data' | 'error';
+    status: 'ok' | 'no-data' | 'stale' | 'error';
+    observedAt?: string | null;
 }
 
 export interface WaveReadingsPayload {

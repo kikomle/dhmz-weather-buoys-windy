@@ -1,50 +1,186 @@
 {
-  "generatedAt": "2026-08-21T10:21:14Z",
-  "method": "latest blue significant-wave-height curve point extracted from the DHMZ chart image",
+  "generatedAt": "2026-08-21T11:19:36Z",
+  "method": "latest blue significant-wave-height point calibrated from each image's current metre scale and daily time grid",
   "buoys": {
     "Kvarner": {
       "waveHeightM": 0.6,
       "status": "ok",
       "confidence": "high",
       "latestPointX": 778,
+      "observedAt": "2026-08-21T10:43:00+02:00",
+      "ageMinutes": 156,
+      "chartWindow": {
+        "start": "2026-08-19T00:00:00+02:00",
+        "end": "2026-08-21T11:10:00+02:00"
+      },
+      "calibration": {
+        "axisTicks": [
+          {
+            "pixelY": 808,
+            "metres": 2.0
+          },
+          {
+            "pixelY": 856,
+            "metres": 1.5
+          },
+          {
+            "pixelY": 903,
+            "metres": 1.0
+          },
+          {
+            "pixelY": 951,
+            "metres": 0.5
+          },
+          {
+            "pixelY": 998,
+            "metres": 0.0
+          }
+        ],
+        "dayGridColumns": [
+          88,
+          370,
+          654,
+          936
+        ]
+      },
       "sourceUrl": "https://vrijeme.hr/plutace/plutaca-Kvarner-en.png",
-      "chartUpdatedAt": null,
-      "extractedAt": "2026-08-21T10:21:14Z"
+      "chartUpdatedAt": "2026-08-21T11:03:08Z",
+      "extractedAt": "2026-08-21T11:19:36Z"
     },
     "Blitvenica": {
       "waveHeightM": 1.2,
-      "status": "ok",
+      "status": "stale",
       "confidence": "high",
       "latestPointX": 701,
+      "observedAt": "2026-08-21T04:10:00+02:00",
+      "ageMinutes": 549,
+      "chartWindow": {
+        "start": "2026-08-19T00:00:00+02:00",
+        "end": "2026-08-21T05:00:00+02:00"
+      },
+      "calibration": {
+        "axisTicks": [
+          {
+            "pixelY": 817,
+            "metres": 3.0
+          },
+          {
+            "pixelY": 877,
+            "metres": 2.0
+          },
+          {
+            "pixelY": 938,
+            "metres": 1.0
+          },
+          {
+            "pixelY": 998,
+            "metres": 0.0
+          }
+        ],
+        "dayGridColumns": [
+          88,
+          370,
+          654,
+          936
+        ]
+      },
       "sourceUrl": "https://vrijeme.hr/plutace/plutaca-Blitvenica-en.png",
-      "chartUpdatedAt": null,
-      "extractedAt": "2026-08-21T10:21:14Z"
+      "chartUpdatedAt": "2026-08-21T11:03:16Z",
+      "extractedAt": "2026-08-21T11:19:36Z"
     },
     "Viski_kanal": {
-      "waveHeightM": 0.6,
+      "waveHeightM": 0.7,
       "status": "ok",
       "confidence": "high",
-      "latestPointX": 788,
+      "latestPointX": 806,
+      "observedAt": "2026-08-21T12:45:00+02:00",
+      "ageMinutes": 34,
+      "chartWindow": {
+        "start": "2026-08-19T00:00:00+02:00",
+        "end": "2026-08-21T12:50:00+02:00"
+      },
+      "calibration": {
+        "axisTicks": [
+          {
+            "pixelY": 810,
+            "metres": 1.5
+          },
+          {
+            "pixelY": 872,
+            "metres": 1.0
+          },
+          {
+            "pixelY": 935,
+            "metres": 0.5
+          },
+          {
+            "pixelY": 998,
+            "metres": 0.0
+          }
+        ],
+        "dayGridColumns": [
+          92,
+          374,
+          658,
+          940
+        ]
+      },
       "sourceUrl": "https://vrijeme.hr/plutace/plutaca-Viski_kanal-en.png",
-      "chartUpdatedAt": null,
-      "extractedAt": "2026-08-21T10:21:14Z"
+      "chartUpdatedAt": "2026-08-21T11:03:23Z",
+      "extractedAt": "2026-08-21T11:19:36Z"
     },
     "Palagruza": {
       "waveHeightM": null,
       "status": "no-data",
       "confidence": "high",
+      "chartWindow": {
+        "start": "2026-08-19T00:00:00+02:00",
+        "end": "2026-08-19T00:00:00+02:00"
+      },
       "sourceUrl": "https://vrijeme.hr/plutace/plutaca-Palagruza-en.png",
-      "chartUpdatedAt": null,
-      "extractedAt": "2026-08-21T10:21:14Z"
+      "chartUpdatedAt": "2026-08-21T11:03:31Z",
+      "extractedAt": "2026-08-21T11:19:36Z"
     },
     "Molunat": {
-      "waveHeightM": 0.6,
+      "waveHeightM": 0.5,
       "status": "ok",
       "confidence": "high",
-      "latestPointX": 784,
+      "latestPointX": 801,
+      "observedAt": "2026-08-21T12:40:00+02:00",
+      "ageMinutes": 39,
+      "chartWindow": {
+        "start": "2026-08-19T00:00:00+02:00",
+        "end": "2026-08-21T12:40:00+02:00"
+      },
+      "calibration": {
+        "axisTicks": [
+          {
+            "pixelY": 810,
+            "metres": 1.5
+          },
+          {
+            "pixelY": 872,
+            "metres": 1.0
+          },
+          {
+            "pixelY": 935,
+            "metres": 0.5
+          },
+          {
+            "pixelY": 998,
+            "metres": 0.0
+          }
+        ],
+        "dayGridColumns": [
+          88,
+          370,
+          654,
+          936
+        ]
+      },
       "sourceUrl": "https://vrijeme.hr/plutace/plutaca-Molunat-en.png",
-      "chartUpdatedAt": null,
-      "extractedAt": "2026-08-21T10:21:14Z"
+      "chartUpdatedAt": "2026-08-21T11:03:38Z",
+      "extractedAt": "2026-08-21T11:19:36Z"
     }
   }
 }

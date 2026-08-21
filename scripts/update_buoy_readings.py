@@ -9,14 +9,18 @@ import json
 import math
 import re
 import shutil
+import ssl
 import subprocess
 import tempfile
 import urllib.request
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
+from statistics import median
+from zoneinfo import ZoneInfo
 
+import certifi
 from PIL import Image, ImageOps
 
 
@@ -28,6 +32,14 @@ BUOYS = {
     "Molunat": "https://vrijeme.hr/plutace/plutaca-Molunat-en.png",
 }
 
+DHMZ_TIMEZONE = ZoneInfo("Europe/Zagreb")
+MAX_READING_AGE = timedelta(hours=3)
+CHART_WINDOW_PATTERN = re.compile(
+    r"(\d{1,2})\.(\d{1,2})\.(\d{4})\.\s*(\d{1,2}):(\d{2})\s*h\s*-\s*"
+    r"(\d{1,2})\.(\d{1,2})\.(\d{4})\.\s*(\d{1,2}):(\d{2})\s*h",
+    re.IGNORECASE,
+)
+
 
 @dataclass(frozen=True)
 class PlotFrame:
@@ -35,6 +47,12 @@ class PlotFrame:
     right: int
     top: int
     bottom: int
+
+
+@dataclass(frozen=True)
+class ChartWindow:
+    start: datetime
+    end: datetime
 
 
 def utc_now() -> str:
@@ -125,13 +143,75 @@ def find_latest_blue_point(image: Image.Image, frame: PlotFrame) -> tuple[int, f
         return None
 
     latest_x = max(points_by_x)
-    latest_pixels: list[int] = []
-    for x in range(max(frame.left, latest_x - 3), latest_x + 1):
-        latest_pixels.extend(points_by_x.get(x, []))
+    return latest_x, float(median(points_by_x[latest_x]))
 
-    latest_pixels.sort()
-    median_y = latest_pixels[len(latest_pixels) // 2]
-    return latest_x, float(median_y)
+
+def read_chart_window(image: Image.Image) -> tuple[ChartWindow, str]:
+    header = image.convert("L").crop((0, 0, image.width, 115))
+    header = ImageOps.autocontrast(header).resize((header.width * 2, header.height * 2))
+
+    with tempfile.NamedTemporaryFile(suffix=".png") as temporary:
+        header.save(temporary.name)
+        result = subprocess.run(
+            ["tesseract", temporary.name, "stdout", "--psm", "6"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+    match = CHART_WINDOW_PATTERN.search(result.stdout)
+    if not match:
+        raise ValueError(f"Chart date window was not recognized: {result.stdout.strip()!r}")
+
+    values = [int(value) for value in match.groups()]
+    start = datetime(
+        values[2], values[1], values[0], values[3], values[4], tzinfo=DHMZ_TIMEZONE
+    )
+    end = datetime(
+        values[7], values[6], values[5], values[8], values[9], tzinfo=DHMZ_TIMEZONE
+    )
+    if end < start or end - start > timedelta(days=4):
+        raise ValueError(f"Chart date window is invalid: {start.isoformat()} to {end.isoformat()}")
+    return ChartWindow(start=start, end=end), result.stdout.strip()
+
+
+def find_day_grid_columns(image: Image.Image, frame: PlotFrame) -> list[int]:
+    pixels = image.convert("RGB").load()
+    plot_height = frame.bottom - frame.top
+    candidates: list[int] = []
+
+    for x in range(frame.left, frame.right + 1):
+        neutral = 0
+        for y in range(frame.top + 2, frame.bottom - 1):
+            red, green, blue = pixels[x, y]
+            if 190 <= red <= 240 and abs(red - green) <= 2 and abs(red - blue) <= 2:
+                neutral += 1
+        if neutral >= plot_height * 0.68:
+            candidates.append(x)
+
+    columns = [round(sum(group) / len(group)) for group in group_nearby(candidates, 2)]
+    if len(columns) < 3:
+        raise ValueError(f"Daily time-grid columns were not found: {columns}")
+
+    spacings = [right - left for left, right in zip(columns, columns[1:])]
+    day_width = median(spacings)
+    if day_width < 150 or any(abs(spacing - day_width) > day_width * 0.04 for spacing in spacings):
+        raise ValueError(f"Daily time-grid spacing is invalid: {columns}")
+    return columns
+
+
+def point_observed_at(latest_x: int, chart_window: ChartWindow, day_columns: list[int]) -> datetime:
+    day_width = median(
+        right - left for left, right in zip(day_columns, day_columns[1:])
+    )
+    hours_from_start = (latest_x - day_columns[0]) * 24 / day_width
+    observed_at = chart_window.start + timedelta(hours=hours_from_start)
+    if observed_at > chart_window.end + timedelta(minutes=90):
+        raise ValueError(
+            "Wave point falls after the chart's latest timestamp: "
+            f"{observed_at.isoformat()} > {chart_window.end.isoformat()}"
+        )
+    return observed_at
 
 
 def grid_row_candidates(image: Image.Image, frame: PlotFrame) -> list[int]:
@@ -224,14 +304,22 @@ def fit_axis(points: list[tuple[float, float]]) -> tuple[float, float, int]:
     return slope, intercept, len(inliers)
 
 
-def extract_wave_height(image: Image.Image) -> dict[str, object]:
+def extract_wave_height(
+    image: Image.Image, reference_time: datetime | None = None
+) -> dict[str, object]:
     frame = find_wave_plot(image)
+    chart_window, _ = read_chart_window(image)
+    day_columns = find_day_grid_columns(image, frame)
     latest = find_latest_blue_point(image, frame)
     if latest is None:
         return {
             "waveHeightM": None,
             "status": "no-data",
             "confidence": "high",
+            "chartWindow": {
+                "start": chart_window.start.isoformat(),
+                "end": chart_window.end.isoformat(),
+            },
         }
 
     ticks = [
@@ -242,19 +330,44 @@ def extract_wave_height(image: Image.Image) -> dict[str, object]:
     slope, intercept, inlier_count = fit_axis(ticks)
     latest_x, latest_y = latest
     wave_height = max(0.0, slope * latest_y + intercept)
+    tick_values = [value for _, value in ticks]
+    if wave_height < min(tick_values) - 0.1 or wave_height > max(tick_values) + 0.1:
+        raise ValueError(f"Wave height falls outside the detected axis: {wave_height}")
+
+    observed_at = point_observed_at(latest_x, chart_window, day_columns)
+    now = reference_time or datetime.now(timezone.utc)
+    age = now.astimezone(timezone.utc) - observed_at.astimezone(timezone.utc)
+    if age < -timedelta(minutes=90):
+        raise ValueError(f"Wave observation is unexpectedly in the future: {observed_at.isoformat()}")
+
     rounded_height = math.floor(wave_height * 10 + 0.5) / 10
+    age_minutes = max(0, round(age.total_seconds() / 60))
+    status = "stale" if age > MAX_READING_AGE else "ok"
 
     return {
         "waveHeightM": rounded_height,
-        "status": "ok",
+        "status": status,
         "confidence": "high" if inlier_count >= 4 else "medium",
         "latestPointX": latest_x,
+        "observedAt": observed_at.replace(second=0, microsecond=0).isoformat(),
+        "ageMinutes": age_minutes,
+        "chartWindow": {
+            "start": chart_window.start.isoformat(),
+            "end": chart_window.end.isoformat(),
+        },
+        "calibration": {
+            "axisTicks": [
+                {"pixelY": round(y), "metres": value} for y, value in ticks
+            ],
+            "dayGridColumns": day_columns,
+        },
     }
 
 
 def fetch_chart(url: str) -> tuple[Image.Image, str | None]:
     request = urllib.request.Request(url, headers={"User-Agent": "dhmz-windy-buoy-reader/1.0"})
-    with urllib.request.urlopen(request, timeout=30) as response:
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    with urllib.request.urlopen(request, timeout=30, context=ssl_context) as response:
         image = Image.open(io.BytesIO(response.read())).convert("RGB")
         modified = response.headers.get("Last-Modified")
 
@@ -271,6 +384,7 @@ def fixture_chart(fixtures_dir: Path, buoy_id: str) -> tuple[Image.Image, None]:
 
 def update_readings(output: Path, fixtures_dir: Path | None) -> dict[str, object]:
     generated_at = utc_now()
+    reference_time = datetime.now(timezone.utc)
     readings: dict[str, object] = {}
 
     for buoy_id, source_url in BUOYS.items():
@@ -280,7 +394,7 @@ def update_readings(output: Path, fixtures_dir: Path | None) -> dict[str, object
                 if fixtures_dir
                 else fetch_chart(source_url)
             )
-            reading = extract_wave_height(image)
+            reading = extract_wave_height(image, reference_time)
             reading.update(
                 {
                     "sourceUrl": source_url,
@@ -302,7 +416,10 @@ def update_readings(output: Path, fixtures_dir: Path | None) -> dict[str, object
 
     payload = {
         "generatedAt": generated_at,
-        "method": "latest blue significant-wave-height curve point extracted from the DHMZ chart image",
+        "method": (
+            "latest blue significant-wave-height point calibrated from each image's "
+            "current metre scale and daily time grid"
+        ),
         "buoys": readings,
     }
     output.parent.mkdir(parents=True, exist_ok=True)

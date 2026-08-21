@@ -11,8 +11,8 @@ const __pluginConfig =  {
   "mobileUI": "fullscreen",
   "routerPath": "/croatian-buoys",
   "private": true,
-  "built": 1787307679640,
-  "builtReadable": "2026-08-21T10:21:19.640Z",
+  "built": 1787311190335,
+  "builtReadable": "2026-08-21T11:19:50.335Z",
   "screenshot": "screenshot.jpg"
 };
 
@@ -729,7 +729,7 @@ function add_css(target) {
 
 function get_each_context(ctx, list, i) {
 	const child_ctx = ctx.slice();
-	child_ctx[37] = list[i];
+	child_ctx[39] = list[i];
 	return child_ctx;
 }
 
@@ -745,7 +745,7 @@ function create_each_block(ctx) {
 	let dispose;
 
 	function click_handler_1() {
-		return /*click_handler_1*/ ctx[22](/*buoy*/ ctx[37]);
+		return /*click_handler_1*/ ctx[22](/*buoy*/ ctx[39]);
 	}
 
 	return {
@@ -754,14 +754,14 @@ function create_each_block(ctx) {
 			span0 = element("span");
 			t0 = space();
 			span1 = element("span");
-			span1.textContent = `${/*buoy*/ ctx[37].name}`;
+			span1.textContent = `${/*buoy*/ ctx[39].name}`;
 			t2 = space();
 			attr(span0, "class", "station-pill__dot svelte-zgskb6");
 			attr(span0, "aria-hidden", "true");
 			attr(button, "class", "station-pill svelte-zgskb6");
 			attr(button, "type", "button");
-			attr(button, "aria-pressed", button_aria_pressed_value = /*selectedBuoy*/ ctx[0].id === /*buoy*/ ctx[37].id);
-			toggle_class(button, "is-selected", /*selectedBuoy*/ ctx[0].id === /*buoy*/ ctx[37].id);
+			attr(button, "aria-pressed", button_aria_pressed_value = /*selectedBuoy*/ ctx[0].id === /*buoy*/ ctx[39].id);
+			toggle_class(button, "is-selected", /*selectedBuoy*/ ctx[0].id === /*buoy*/ ctx[39].id);
 		},
 		m(target, anchor) {
 			insert(target, button, anchor);
@@ -778,12 +778,12 @@ function create_each_block(ctx) {
 		p(new_ctx, dirty) {
 			ctx = new_ctx;
 
-			if (dirty[0] & /*selectedBuoy*/ 1 && button_aria_pressed_value !== (button_aria_pressed_value = /*selectedBuoy*/ ctx[0].id === /*buoy*/ ctx[37].id)) {
+			if (dirty[0] & /*selectedBuoy*/ 1 && button_aria_pressed_value !== (button_aria_pressed_value = /*selectedBuoy*/ ctx[0].id === /*buoy*/ ctx[39].id)) {
 				attr(button, "aria-pressed", button_aria_pressed_value);
 			}
 
 			if (dirty[0] & /*selectedBuoy*/ 1) {
-				toggle_class(button, "is-selected", /*selectedBuoy*/ ctx[0].id === /*buoy*/ ctx[37].id);
+				toggle_class(button, "is-selected", /*selectedBuoy*/ ctx[0].id === /*buoy*/ ctx[39].id);
 			}
 		},
 		d(detaching) {
@@ -841,10 +841,10 @@ function create_fragment(ctx) {
 	let t14;
 	let t15;
 	let p1;
-	let t16_value = /*formatCoordinate*/ ctx[10](/*selectedBuoy*/ ctx[0].lat, 'N', 'S') + "";
+	let t16_value = /*formatCoordinate*/ ctx[9](/*selectedBuoy*/ ctx[0].lat, 'N', 'S') + "";
 	let t16;
 	let t17;
-	let t18_value = /*formatCoordinate*/ ctx[10](/*selectedBuoy*/ ctx[0].lon, 'E', 'W') + "";
+	let t18_value = /*formatCoordinate*/ ctx[9](/*selectedBuoy*/ ctx[0].lon, 'E', 'W') + "";
 	let t18;
 	let t19;
 	let t20_value = /*selectedBuoy*/ ctx[0].mooringDepth.toFixed(1) + "";
@@ -856,7 +856,7 @@ function create_fragment(ctx) {
 	let span4;
 	let t24;
 	let strong;
-	let t25_value = /*formatWaveHeight*/ ctx[12](/*selectedReading*/ ctx[1]) + "";
+	let t25_value = /*formatWaveHeight*/ ctx[11](/*selectedReading*/ ctx[1]) + "";
 	let t25;
 	let t26;
 	let button1;
@@ -868,7 +868,7 @@ function create_fragment(ctx) {
 	? 'Loading latest chart…'
 	: /*viewMode*/ ctx[6] === 'full'
 		? 'Full size · scroll to explore'
-		: `Checked ${/*formatCheckedAt*/ ctx[11](/*lastChecked*/ ctx[5])}`) + "";
+		: `Checked ${/*formatCheckedAt*/ ctx[10](/*lastChecked*/ ctx[5])}`) + "";
 
 	let t29;
 	let t30;
@@ -885,11 +885,7 @@ function create_fragment(ctx) {
 	let t36;
 	let footer;
 	let span6;
-
-	let t37_value = (/*readingsGeneratedAt*/ ctx[7]
-	? `Wave reading updated ${/*formatCheckedAt*/ ctx[11](/*readingsGeneratedAt*/ ctx[7])}`
-	: 'Wave readings refresh every 10 minutes') + "";
-
+	let t37_value = /*formatWaveReadingStatus*/ ctx[12](/*selectedReading*/ ctx[1]) + "";
 	let t37;
 	let t38;
 	let a0;
@@ -913,11 +909,11 @@ function create_fragment(ctx) {
 	return {
 		c() {
 			div0 = element("div");
-			div0.textContent = `${/*title*/ ctx[9]}`;
+			div0.textContent = `${/*title*/ ctx[8]}`;
 			t1 = space();
 			section = element("section");
 			div1 = element("div");
-			div1.textContent = `${/*title*/ ctx[9]}`;
+			div1.textContent = `${/*title*/ ctx[8]}`;
 			t3 = space();
 			div3 = element("div");
 			div2 = element("div");
@@ -1016,7 +1012,7 @@ function create_fragment(ctx) {
 			attr(span4, "class", "svelte-zgskb6");
 			attr(strong, "class", "svelte-zgskb6");
 			attr(div6, "class", "wave-summary svelte-zgskb6");
-			toggle_class(div6, "is-unavailable", !/*hasSelectedWaveReading*/ ctx[8]);
+			toggle_class(div6, "is-unavailable", !/*hasSelectedWaveReading*/ ctx[7]);
 			attr(button1, "class", "refresh-button svelte-zgskb6");
 			attr(button1, "type", "button");
 			attr(button1, "aria-label", "Refresh the buoy chart and wave reading");
@@ -1158,13 +1154,13 @@ function create_fragment(ctx) {
 			}
 
 			if (dirty[0] & /*selectedBuoy*/ 1 && t14_value !== (t14_value = /*selectedBuoy*/ ctx[0].name + "")) set_data(t14, t14_value);
-			if (dirty[0] & /*selectedBuoy*/ 1 && t16_value !== (t16_value = /*formatCoordinate*/ ctx[10](/*selectedBuoy*/ ctx[0].lat, 'N', 'S') + "")) set_data(t16, t16_value);
-			if (dirty[0] & /*selectedBuoy*/ 1 && t18_value !== (t18_value = /*formatCoordinate*/ ctx[10](/*selectedBuoy*/ ctx[0].lon, 'E', 'W') + "")) set_data(t18, t18_value);
+			if (dirty[0] & /*selectedBuoy*/ 1 && t16_value !== (t16_value = /*formatCoordinate*/ ctx[9](/*selectedBuoy*/ ctx[0].lat, 'N', 'S') + "")) set_data(t16, t16_value);
+			if (dirty[0] & /*selectedBuoy*/ 1 && t18_value !== (t18_value = /*formatCoordinate*/ ctx[9](/*selectedBuoy*/ ctx[0].lon, 'E', 'W') + "")) set_data(t18, t18_value);
 			if (dirty[0] & /*selectedBuoy*/ 1 && t20_value !== (t20_value = /*selectedBuoy*/ ctx[0].mooringDepth.toFixed(1) + "")) set_data(t20, t20_value);
-			if (dirty[0] & /*selectedReading*/ 2 && t25_value !== (t25_value = /*formatWaveHeight*/ ctx[12](/*selectedReading*/ ctx[1]) + "")) set_data(t25, t25_value);
+			if (dirty[0] & /*selectedReading*/ 2 && t25_value !== (t25_value = /*formatWaveHeight*/ ctx[11](/*selectedReading*/ ctx[1]) + "")) set_data(t25, t25_value);
 
-			if (dirty[0] & /*hasSelectedWaveReading*/ 256) {
-				toggle_class(div6, "is-unavailable", !/*hasSelectedWaveReading*/ ctx[8]);
+			if (dirty[0] & /*hasSelectedWaveReading*/ 128) {
+				toggle_class(div6, "is-unavailable", !/*hasSelectedWaveReading*/ ctx[7]);
 			}
 
 			if (dirty[0] & /*imageLoading*/ 16) {
@@ -1175,7 +1171,7 @@ function create_fragment(ctx) {
 			? 'Loading latest chart…'
 			: /*viewMode*/ ctx[6] === 'full'
 				? 'Full size · scroll to explore'
-				: `Checked ${/*formatCheckedAt*/ ctx[11](/*lastChecked*/ ctx[5])}`) + "")) set_data(t29, t29_value);
+				: `Checked ${/*formatCheckedAt*/ ctx[10](/*lastChecked*/ ctx[5])}`) + "")) set_data(t29, t29_value);
 
 			if (dirty[0] & /*viewMode*/ 64) {
 				toggle_class(button2, "is-active", /*viewMode*/ ctx[6] === 'fit');
@@ -1212,9 +1208,7 @@ function create_fragment(ctx) {
 				toggle_class(div10, "is-full", /*viewMode*/ ctx[6] === 'full');
 			}
 
-			if (dirty[0] & /*readingsGeneratedAt*/ 128 && t37_value !== (t37_value = (/*readingsGeneratedAt*/ ctx[7]
-			? `Wave reading updated ${/*formatCheckedAt*/ ctx[11](/*readingsGeneratedAt*/ ctx[7])}`
-			: 'Wave readings refresh every 10 minutes') + "")) set_data(t37, t37_value);
+			if (dirty[0] & /*selectedReading*/ 2 && t37_value !== (t37_value = /*formatWaveReadingStatus*/ ctx[12](/*selectedReading*/ ctx[1]) + "")) set_data(t37, t37_value);
 
 			if (dirty[0] & /*selectedBuoy*/ 1 && a0_href_value !== (a0_href_value = /*selectedBuoy*/ ctx[0].chartUrl)) {
 				attr(a0, "href", a0_href_value);
@@ -1241,6 +1235,14 @@ function instance($$self, $$props, $$invalidate) {
 	const { title } = config;
 	const refreshIntervalMs = 10 * 60 * 1000;
 	const checkedAtFormatter = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+
+	const observedAtFormatter = new Intl.DateTimeFormat(undefined,
+	{
+			weekday: 'short',
+			hour: '2-digit',
+			minute: '2-digit'
+		});
+
 	let selectedBuoy = buoys[0];
 	let chartVersion = Date.now();
 	let chartSrc = '';
@@ -1259,10 +1261,27 @@ function instance($$self, $$props, $$invalidate) {
 
 	const formatWaveHeight = (reading, compact = false) => {
 		if (reading?.status !== 'ok' || reading.waveHeightM === null) {
-			return compact ? '— m' : 'No data';
+			return compact
+			? '— m'
+			: reading?.status === 'stale' ? 'Stale' : 'No data';
 		}
 
 		return `${reading.waveHeightM.toFixed(1)}${compact ? '' : ' '}m`;
+	};
+
+	const formatWaveReadingStatus = reading => {
+		if (reading?.observedAt) {
+			const observedAt = new Date(reading.observedAt);
+			const label = observedAtFormatter.format(observedAt);
+
+			return reading.status === 'ok'
+			? `Wave point observed ${label}`
+			: `No current wave point · last observed ${label}`;
+		}
+
+		return readingsGeneratedAt
+		? `No wave data in chart checked ${formatCheckedAt(readingsGeneratedAt)}`
+		: 'Wave readings refresh every 10 minutes';
 	};
 
 	const waveReadingFor = buoyId => waveReadings[buoyId];
@@ -1308,13 +1327,22 @@ function instance($$self, $$props, $$invalidate) {
 		buoys.forEach(buoy => {
 			const reading = payload.buoys?.[buoy.id];
 			const height = reading?.waveHeightM;
+			const observedAt = reading?.observedAt;
 			const isValidHeight = typeof height === 'number' && Number.isFinite(height) && height >= 0 && height <= 25;
+			const isValidObservedAt = typeof observedAt === 'string' && !Number.isNaN(new Date(observedAt).getTime());
 
-			normalized[buoy.id] = reading?.status === 'ok' && isValidHeight
-			? { waveHeightM: height, status: 'ok' }
+			normalized[buoy.id] = reading?.status === 'ok' && isValidHeight && isValidObservedAt
+			? {
+					waveHeightM: height,
+					status: 'ok',
+					observedAt
+				}
 			: {
 					waveHeightM: null,
-					status: reading?.status === 'no-data' ? 'no-data' : 'error'
+					status: reading?.status === 'no-data' || reading?.status === 'stale'
+					? reading.status
+					: 'error',
+					observedAt: isValidObservedAt ? observedAt : null
 				};
 		});
 
@@ -1335,7 +1363,7 @@ function instance($$self, $$props, $$invalidate) {
 			const payload = parseWaveReadings(await response.json());
 			const generatedAt = new Date(payload.generatedAt);
 			$$invalidate(20, waveReadings = payload.buoys);
-			$$invalidate(7, readingsGeneratedAt = Number.isNaN(generatedAt.getTime()) ? null : generatedAt);
+			readingsGeneratedAt = Number.isNaN(generatedAt.getTime()) ? null : generatedAt;
 			updateMarkerSelection();
 		} catch(error) {
 			console.warn('DHMZ wave readings are temporarily unavailable', error);
@@ -1435,7 +1463,7 @@ function instance($$self, $$props, $$invalidate) {
 		}
 
 		if ($$self.$$.dirty[0] & /*selectedReading*/ 2) {
-			$$invalidate(8, hasSelectedWaveReading = selectedReading?.status === 'ok' && selectedReading.waveHeightM !== null);
+			$$invalidate(7, hasSelectedWaveReading = selectedReading?.status === 'ok' && selectedReading.waveHeightM !== null);
 		}
 	};
 
@@ -1447,12 +1475,12 @@ function instance($$self, $$props, $$invalidate) {
 		imageLoading,
 		lastChecked,
 		viewMode,
-		readingsGeneratedAt,
 		hasSelectedWaveReading,
 		title,
 		formatCoordinate,
 		formatCheckedAt,
 		formatWaveHeight,
+		formatWaveReadingStatus,
 		refreshAllData,
 		selectBuoy,
 		showAllBuoys,
