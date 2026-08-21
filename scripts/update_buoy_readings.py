@@ -12,6 +12,8 @@ import shutil
 import ssl
 import subprocess
 import tempfile
+import time
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -365,16 +367,37 @@ def extract_wave_height(
 
 
 def fetch_chart(url: str) -> tuple[Image.Image, str | None]:
-    request = urllib.request.Request(url, headers={"User-Agent": "dhmz-windy-buoy-reader/1.0"})
     ssl_context = ssl.create_default_context(cafile=certifi.where())
-    with urllib.request.urlopen(request, timeout=30, context=ssl_context) as response:
-        image = Image.open(io.BytesIO(response.read())).convert("RGB")
-        modified = response.headers.get("Last-Modified")
+    last_error: Exception | None = None
 
-    if not modified:
-        return image, None
-    parsed = parsedate_to_datetime(modified).astimezone(timezone.utc)
-    return image, parsed.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    for attempt in range(3):
+        request = urllib.request.Request(
+            url, headers={"User-Agent": "dhmz-windy-buoy-reader/1.0"}
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=30, context=ssl_context) as response:
+                body = response.read()
+                content_length = response.headers.get("Content-Length")
+                modified = response.headers.get("Last-Modified")
+
+            if content_length and len(body) != int(content_length):
+                raise OSError(
+                    f"Truncated chart download: expected {content_length} bytes, got {len(body)}"
+                )
+
+            source = Image.open(io.BytesIO(body))
+            source.load()
+            image = source.convert("RGB")
+            if not modified:
+                return image, None
+            parsed = parsedate_to_datetime(modified).astimezone(timezone.utc)
+            return image, parsed.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        except (OSError, ValueError, urllib.error.URLError) as error:
+            last_error = error
+            if attempt < 2:
+                time.sleep(2**attempt)
+
+    raise OSError(f"DHMZ chart download failed after 3 attempts: {last_error}")
 
 
 def fixture_chart(fixtures_dir: Path, buoy_id: str) -> tuple[Image.Image, None]:
