@@ -62,7 +62,13 @@
         </header>
 
         <div class="chart-toolbar">
-            <span>{imageLoading ? 'Loading latest chart…' : `Checked ${formatCheckedAt(lastChecked)}`}</span>
+            <span>
+                {imageLoading
+                    ? 'Loading latest chart…'
+                    : viewMode === 'full'
+                      ? 'Full size · scroll to explore'
+                      : `Checked ${formatCheckedAt(lastChecked)}`}
+            </span>
             <div class="view-toggle" aria-label="Chart size">
                 <button
                     class:is-active={viewMode === 'fit'}
@@ -137,7 +143,7 @@
     let chartFailed = false;
     let imageLoading = true;
     let lastChecked = new Date();
-    let viewMode: 'fit' | 'full' = 'fit';
+    let viewMode: 'fit' | 'full' = 'full';
     let refreshTimer: ReturnType<typeof setInterval> | null = null;
     let buoyMarkers: { buoy: Buoy; marker: L.Marker }[] = [];
 
@@ -148,17 +154,24 @@
 
     const formatCheckedAt = (date: Date) => checkedAtFormatter.format(date);
 
-    const makeBuoyIcon = (isSelected: boolean) =>
+    const makeBuoyIcon = (buoy: Buoy, isSelected: boolean) =>
         new L.DivIcon({
             className: `dhmz-buoy-marker${isSelected ? ' is-selected' : ''}`,
-            html: '<span class="dhmz-buoy-marker__halo"></span><span class="dhmz-buoy-marker__core">≈</span>',
-            iconAnchor: [19, 19],
-            iconSize: [38, 38],
+            html: `<span class="dhmz-buoy-marker__halo"></span>
+                <span class="dhmz-buoy-marker__ring">
+                    <span class="dhmz-buoy-marker__core"></span>
+                </span>
+                <span class="dhmz-buoy-marker__label">
+                    <span class="dhmz-buoy-marker__arrow" aria-hidden="true">▲</span>
+                    <span>${buoy.name}</span>
+                </span>`,
+            iconAnchor: [28, 28],
+            iconSize: [128, 88],
         });
 
     const updateMarkerSelection = () => {
         buoyMarkers.forEach(({ buoy, marker }) => {
-            marker.setIcon(makeBuoyIcon(buoy.id === selectedBuoy.id));
+            marker.setIcon(makeBuoyIcon(buoy, buoy.id === selectedBuoy.id));
         });
     };
 
@@ -171,7 +184,7 @@
 
     const selectBuoy = (buoy: Buoy, focusMap = true) => {
         selectedBuoy = buoy;
-        viewMode = 'fit';
+        viewMode = 'full';
         updateMarkerSelection();
         refreshData();
 
@@ -192,7 +205,10 @@
         buoyMarkers = buoys.map(buoy => {
             const marker = new L.Marker(
                 { lat: buoy.lat, lng: buoy.lon },
-                { icon: makeBuoyIcon(buoy.id === selectedBuoy.id) },
+                {
+                    icon: makeBuoyIcon(buoy, buoy.id === selectedBuoy.id),
+                    title: `${buoy.name} DHMZ buoy`,
+                },
             ).addTo(map);
 
             marker.on('click', () => selectBuoy(buoy, false));
@@ -472,9 +488,12 @@
 
     .chart-viewport {
         position: relative;
-        min-height: 180px;
-        max-height: 535px;
+        min-height: 300px;
+        max-height: min(70vh, 760px);
         overflow: auto;
+        overscroll-behavior: contain;
+        scrollbar-color: #72aebc #e7f0f2;
+        scrollbar-width: auto;
         background:
             linear-gradient(90deg, rgba(220, 235, 237, 0.3) 1px, transparent 1px) 0 0 / 18px 18px,
             linear-gradient(rgba(220, 235, 237, 0.3) 1px, transparent 1px) 0 0 / 18px 18px,
@@ -488,7 +507,7 @@
         }
 
         &.is-full img {
-            width: 1000px;
+            width: 997px;
             max-width: none;
         }
 
@@ -574,38 +593,101 @@
 
     :global(.dhmz-buoy-marker) {
         position: relative;
+        width: 128px !important;
+        height: 88px !important;
         border: 0;
         background: transparent;
+        filter: drop-shadow(0 5px 8px rgba(7, 45, 65, 0.26));
     }
 
     :global(.dhmz-buoy-marker__halo) {
         position: absolute;
-        inset: 4px;
+        top: -7px;
+        left: -7px;
+        width: 70px;
+        height: 70px;
         border-radius: 50%;
-        background: rgba(255, 215, 71, 0.28);
+        background: rgba(99, 219, 119, 0.24);
         animation: buoy-pulse 2.5s ease-out infinite;
+    }
+
+    :global(.dhmz-buoy-marker__ring) {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 56px;
+        height: 56px;
+        box-sizing: border-box;
+        border: 2px solid rgba(255, 255, 255, 0.92);
+        border-radius: 50%;
+        background: repeating-conic-gradient(
+            from -8deg,
+            #63dd67 0deg 14deg,
+            #1a9b55 14deg 20deg
+        );
+        box-shadow:
+            0 3px 12px rgba(7, 45, 65, 0.4),
+            inset 0 0 0 1px rgba(6, 100, 74, 0.3);
+        transition: transform 0.18s ease;
+
+        &::before {
+            position: absolute;
+            inset: 10px;
+            border-radius: 50%;
+            background: white;
+            content: '';
+        }
     }
 
     :global(.dhmz-buoy-marker__core) {
         position: absolute;
-        inset: 7px;
-        display: grid;
-        place-items: center;
-        border: 2px solid white;
+        inset: 15px;
+        border: 3px solid #2b8aae;
         border-radius: 50%;
-        background: #ffd747;
-        color: #0a2638;
-        box-shadow: 0 3px 12px rgba(10, 38, 56, 0.45);
-        font-size: 17px;
-        font-weight: 800;
-        line-height: 1;
-        transition: transform 0.15s ease;
+        background: #ecfbff;
+        box-shadow: inset 0 0 0 2px white;
     }
 
-    :global(.dhmz-buoy-marker:hover .dhmz-buoy-marker__core),
-    :global(.dhmz-buoy-marker.is-selected .dhmz-buoy-marker__core) {
-        transform: scale(1.22);
-        background: #8ee3e8;
+    :global(.dhmz-buoy-marker__label) {
+        position: absolute;
+        top: 49px;
+        left: 18px;
+        display: inline-flex;
+        min-width: 88px;
+        min-height: 36px;
+        box-sizing: border-box;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px 6px 9px;
+        border: 2px solid rgba(255, 255, 255, 0.72);
+        border-radius: 12px;
+        background: linear-gradient(145deg, #2f8daf, #237495);
+        color: white;
+        font-size: 13px;
+        font-weight: 750;
+        line-height: 1;
+        text-shadow: 0 1px 1px rgba(7, 45, 65, 0.28);
+        white-space: nowrap;
+        transition:
+            background 0.18s ease,
+            transform 0.18s ease;
+    }
+
+    :global(.dhmz-buoy-marker__arrow) {
+        color: #d9fbff;
+        font-size: 12px;
+        transform: rotate(24deg);
+    }
+
+    :global(.dhmz-buoy-marker:hover .dhmz-buoy-marker__ring),
+    :global(.dhmz-buoy-marker.is-selected .dhmz-buoy-marker__ring) {
+        transform: scale(1.1);
+    }
+
+    :global(.dhmz-buoy-marker:hover .dhmz-buoy-marker__label),
+    :global(.dhmz-buoy-marker.is-selected .dhmz-buoy-marker__label) {
+        background: linear-gradient(145deg, #127f9d, #0a607d);
+        transform: translateY(3px) scale(1.04);
     }
 
     :global(.dhmz-buoy-marker.is-selected .dhmz-buoy-marker__halo) {
@@ -641,7 +723,8 @@
         }
 
         .chart-viewport {
-            max-height: 52vh;
+            min-height: 280px;
+            max-height: 65vh;
         }
     }
 

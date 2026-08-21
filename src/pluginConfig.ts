@@ -10,7 +10,7 @@ const config: ExternalPluginConfig = {
     author: 'Community plugin',
     repository: 'https://github.com/kikomle/dhmz-weather-buoys-windy',
     desktopUI: 'rhpane',
-    desktopWidth: 460,
+    desktopWidth: 620,
     mobileUI: 'fullscreen',
     routerPath: '/croatian-buoys',
     private: true,

@@ -7,11 +7,11 @@
   "author": "Community plugin",
   "repository": "https://github.com/kikomle/dhmz-weather-buoys-windy",
   "desktopUI": "rhpane",
-  "desktopWidth": 460,
+  "desktopWidth": 620,
   "mobileUI": "fullscreen",
   "routerPath": "/croatian-buoys",
   "private": true,
-  "built": 1787305439819,
-  "builtReadable": "2026-08-21T09:43:59.819Z",
+  "built": 1787306018989,
+  "builtReadable": "2026-08-21T09:53:38.989Z",
   "screenshot": "screenshot.jpg"
 }
