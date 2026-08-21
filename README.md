@@ -1,6 +1,6 @@
 # Croatian Met-ocean Buoys for Windy
 
-A private Windy.com plugin that places Croatia's five state met-ocean buoys on the map and displays their latest official DHMZ observation charts.
+A public Windy.com plugin that places Croatia's five state met-ocean buoys on the map and displays their latest official DHMZ observation charts. Built using ChatGPT
 
 ## Load in Windy
 
