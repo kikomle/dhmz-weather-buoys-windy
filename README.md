@@ -7,10 +7,10 @@ A private Windy.com plugin that places Croatia's five state met-ocean buoys on t
 Open [Windy developer mode](https://www.windy.com/developer-mode) and load:
 
 ```text
-https://cdn.jsdelivr.net/gh/kikomle/dhmz-weather-buoys-windy@main/dist/plugin.js
+https://kikomle.github.io/dhmz-weather-buoys-windy/plugin.js
 ```
 
-The URL is served from this public GitHub repository through jsDelivr, so no local server or tunnel is required.
+The URL is served directly by GitHub Pages, so no local server, tunnel, or third-party CDN is required.
 
 ## What it includes
 

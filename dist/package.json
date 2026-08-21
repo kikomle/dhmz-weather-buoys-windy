@@ -6,6 +6,7 @@
     "type": "module",
     "scripts": {
         "build": "rm -rf dist && mkdir dist && SERVE=false rollup -c && cp package.json dist/",
+        "build:pages": "npm run build && mkdir -p docs && cp dist/plugin.js dist/plugin.min.js dist/plugin.json dist/screenshot.jpg dist/package.json docs/ && touch docs/.nojekyll",
         "build:win": "rmdir /s /q dist && mkdir dist && set SERVE=false && rollup -c && copy package.json dist\\",
         "start": "rollup -w -c",
         "example01": "CONFIG=example01 rollup -w -c",
