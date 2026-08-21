@@ -2,7 +2,7 @@
     "compilerOptions": {
         "baseUrl": ".",
         "module": "ESNext",
-        "lib": ["es2022", "webworker", "DOM"],
+        "lib": ["es2022", "DOM"],
         "noImplicitAny": true,
         "removeComments": true,
         "outDir": "dist",
@@ -23,6 +23,7 @@
         "strictBindCallApply": true,
         "forceConsistentCasingInFileNames": true,
         "isolatedModules": true,
+        "skipLibCheck": true,
         "paths": {
             "@windy/*": [
                 "./node_modules/@windycom/plugin-devtools/types/*",

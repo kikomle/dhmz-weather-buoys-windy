@@ -1,16 +1,18 @@
 import type { ExternalPluginConfig } from '@windy/interfaces';
 
 const config: ExternalPluginConfig = {
-    name: 'windy-plugin-my-plugin',
+    name: 'windy-plugin-croatian-buoys',
     version: '0.1.0',
-    icon: '🔌',
-    title: 'This is my first plugin',
-    description: 'This is my first plugin.',
-    author: 'John Doe (optional company name)',
-    repository: 'https://github.com/windycom/windy-plugin-template',
+    icon: '⚓',
+    title: 'Croatian Met-ocean Buoys',
+    description:
+        'Live DHMZ meteorological and oceanographic charts from five Croatian Adriatic buoys.',
+    author: 'Community plugin',
+    repository: 'https://github.com/kikomle/dhmz-weather-buoys-windy',
     desktopUI: 'rhpane',
+    desktopWidth: 460,
     mobileUI: 'fullscreen',
-    routerPath: '/my-plugin',
+    routerPath: '/croatian-buoys',
     private: true,
 };
 

@@ -1,58 +1,56 @@
-# Windy Plugin Template
+# Croatian Met-ocean Buoys for Windy
 
-Template for development of Windy Plugins.
+A private Windy.com plugin that places Croatia's five state met-ocean buoys on the map and displays their latest official DHMZ observation charts.
 
-**Documentation at: [https://docs.windy-plugins.com/](https://docs.windy-plugins.com/)**
+## Load in Windy
 
-**Documentation for the Leaflet GL library is at [https://windycom.github.io/LeafletGL/docs/](https://windycom.github.io/LeafletGL/docs/)**
+Open [Windy developer mode](https://www.windy.com/developer-mode) and load:
 
-## Quick start
+```text
+https://cdn.jsdelivr.net/gh/kikomle/dhmz-weather-buoys-windy@main/dist/plugin.js
+```
 
-- Install dependencies with `npm i`
-- Compile the plugin in watch mode with `npm start`
-- Navigate to <https://www.windy.com/developer-mode>
-- Load your plugin from the URL <https://localhost:9999/plugin.js>
-- Code away!
+The URL is served from this public GitHub repository through jsDelivr, so no local server or tunnel is required.
 
-For running the examples:
+## What it includes
 
-- Build the desired example in watch mode with `npm run example01` (or `example02`, etc.)
-- Load the example in Windy's developer mode using the URL <https://localhost:9999/example01/plugin.js>
+- Map markers for Kvarner, Blitvenica, Viški kanal, Palagruža, and Molunat
+- Official DHMZ chart products for wind, waves, air, visibility, pressure, radiation, and sea measurements
+- One-click station selection and map centering
+- Fit-to-panel and full-resolution chart modes
+- Manual refresh and automatic refresh every 10 minutes
+- Mobile and desktop Windy layouts
+- DHMZ attribution and measurement-quality warning
 
-## Known issues
+## Data integration
 
-- In *example03* the boat orientation resets after the user zooms.
-This is likely related to Leaflet GL executing `zoom` events in slightly different order.
-Markers now also internally subscribe to the map's `zoom` event to update their CSS positioning,
-which likely executes *after* the user's `zoom` event in this example.
-- In *example04* map clicks within the rendered cycle do not fire the `singleclick` event, as they have before Leaflet LG.
+DHMZ currently publishes the public buoy observations as generated PNG chart products rather than a JSON API. This plugin loads those official images directly from `https://vrijeme.hr/plutace/`; it does not scrape values from the graphics and it does not need a proxy or API key.
 
-## CHANGELOG
+Buoy positions and mooring depths are WGS84 values published for the state network in *Narodne novine* 5/2026. The observation charts and their interpretation remain the responsibility of DHMZ.
 
--   5.0.0
-    -   Updated example code for the new Leaflet GL map library introduced in client v49.0.0
--   4.2.2
-    -   New plugins are marked as private by default
--   4.2.1
-    -   Updated `@windycom/plugin-devtools` for client v46.1.0
--   4.2.0
-    -   Fixed compiler sourcemap error
--   4.1.0
-    -   Updated plugin upload URL
--   4.0.0
-    -   Updated `@windycom/plugin-devtools` for client v45.0.0
--   3.0.0
-    -   Updated `@windycom/plugin-devtools` for client v42.2.0
--   2.0.0
-    -   Completely new version of the plugin system based in Windy client v42+
--   1.0.0
-    -   New rollup compiler, no more riot architecture
-    -   Updated examples for Windy client v39
--   0.4.0
-    -   Added `plugin-data-loader` to the Plugins API
--   0.3.0
-    -   Examples moved to examples dir
--   0.2.0
-    -   Fixed wrong examples
--   0.1.1
-    -   Initial version of this repo
+## Run locally
+
+```sh
+npm install
+npm start
+```
+
+Then:
+
+1. Open `https://localhost:9999/plugin.js` and accept the local development certificate.
+2. Open `https://www.windy.com/developer-mode`.
+3. Load `https://localhost:9999/plugin.js`.
+
+## Build
+
+```sh
+npm run build
+```
+
+The upload-ready output is written to `dist/`. The plugin is marked `private: true` in `src/pluginConfig.ts`; confirm DHMZ reuse/redistribution terms before changing it to a public Windy plugin.
+
+## Sources
+
+- [DHMZ met-ocean buoy observations](https://meteo.hr/podaci_e.php?section=podaci_vrijeme&param=mop)
+- [Windy Plugins documentation](https://docs.windy-plugins.com/)
+- [Croatian state station network, Narodne novine 5/2026](https://narodne-novine.nn.hr/clanci/sluzbeni/2026_01_5_30.html)

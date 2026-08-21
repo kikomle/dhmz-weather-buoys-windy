@@ -1,0 +1,17 @@
+{
+  "name": "windy-plugin-croatian-buoys",
+  "version": "0.1.0",
+  "icon": "⚓",
+  "title": "Croatian Met-ocean Buoys",
+  "description": "Live DHMZ meteorological and oceanographic charts from five Croatian Adriatic buoys.",
+  "author": "Community plugin",
+  "repository": "https://github.com/kikomle/dhmz-weather-buoys-windy",
+  "desktopUI": "rhpane",
+  "desktopWidth": 460,
+  "mobileUI": "fullscreen",
+  "routerPath": "/croatian-buoys",
+  "private": true,
+  "built": 1787304875365,
+  "builtReadable": "2026-08-21T09:34:35.365Z",
+  "screenshot": "screenshot.jpg"
+}

@@ -1,0 +1,1344 @@
+const __pluginConfig =  {
+  "name": "windy-plugin-croatian-buoys",
+  "version": "0.1.0",
+  "icon": "⚓",
+  "title": "Croatian Met-ocean Buoys",
+  "description": "Live DHMZ meteorological and oceanographic charts from five Croatian Adriatic buoys.",
+  "author": "Community plugin",
+  "repository": "https://github.com/kikomle/dhmz-weather-buoys-windy",
+  "desktopUI": "rhpane",
+  "desktopWidth": 460,
+  "mobileUI": "fullscreen",
+  "routerPath": "/croatian-buoys",
+  "private": true,
+  "built": 1787304875355,
+  "builtReadable": "2026-08-21T09:34:35.355Z",
+  "screenshot": "screenshot.jpg"
+};
+
+// transformCode: import bcast from '@windy/broadcast';
+const bcast = W.broadcast;
+
+// transformCode: import { map } from '@windy/map';
+const { map } = W.map;
+
+
+/** @returns {void} */
+function noop() {}
+
+function run(fn) {
+	return fn();
+}
+
+function blank_object() {
+	return Object.create(null);
+}
+
+/**
+ * @param {Function[]} fns
+ * @returns {void}
+ */
+function run_all(fns) {
+	fns.forEach(run);
+}
+
+/**
+ * @param {any} thing
+ * @returns {thing is Function}
+ */
+function is_function(thing) {
+	return typeof thing === 'function';
+}
+
+/** @returns {boolean} */
+function safe_not_equal(a, b) {
+	return a != a ? b == b : a !== b || (a && typeof a === 'object') || typeof a === 'function';
+}
+
+let src_url_equal_anchor;
+
+/**
+ * @param {string} element_src
+ * @param {string} url
+ * @returns {boolean}
+ */
+function src_url_equal(element_src, url) {
+	if (element_src === url) return true;
+	if (!src_url_equal_anchor) {
+		src_url_equal_anchor = document.createElement('a');
+	}
+	// This is actually faster than doing URL(..).href
+	src_url_equal_anchor.href = url;
+	return element_src === src_url_equal_anchor.href;
+}
+
+/** @returns {boolean} */
+function is_empty(obj) {
+	return Object.keys(obj).length === 0;
+}
+
+/**
+ * @param {Node} target
+ * @param {Node} node
+ * @returns {void}
+ */
+function append(target, node) {
+	target.appendChild(node);
+}
+
+/**
+ * @param {Node} target
+ * @param {string} style_sheet_id
+ * @param {string} styles
+ * @returns {void}
+ */
+function append_styles(target, style_sheet_id, styles) {
+	const append_styles_to = get_root_for_style(target);
+	if (!append_styles_to.getElementById(style_sheet_id)) {
+		const style = element('style');
+		style.id = style_sheet_id;
+		style.textContent = styles;
+		append_stylesheet(append_styles_to, style);
+	}
+}
+
+/**
+ * @param {Node} node
+ * @returns {ShadowRoot | Document}
+ */
+function get_root_for_style(node) {
+	if (!node) return document;
+	const root = node.getRootNode ? node.getRootNode() : node.ownerDocument;
+	if (root && /** @type {ShadowRoot} */ (root).host) {
+		return /** @type {ShadowRoot} */ (root);
+	}
+	return node.ownerDocument;
+}
+
+/**
+ * @param {ShadowRoot | Document} node
+ * @param {HTMLStyleElement} style
+ * @returns {CSSStyleSheet}
+ */
+function append_stylesheet(node, style) {
+	append(/** @type {Document} */ (node).head || node, style);
+	return style.sheet;
+}
+
+/**
+ * @param {Node} target
+ * @param {Node} node
+ * @param {Node} [anchor]
+ * @returns {void}
+ */
+function insert(target, node, anchor) {
+	target.insertBefore(node, anchor || null);
+}
+
+/**
+ * @param {Node} node
+ * @returns {void}
+ */
+function detach(node) {
+	if (node.parentNode) {
+		node.parentNode.removeChild(node);
+	}
+}
+
+/**
+ * @returns {void} */
+function destroy_each(iterations, detaching) {
+	for (let i = 0; i < iterations.length; i += 1) {
+		if (iterations[i]) iterations[i].d(detaching);
+	}
+}
+
+/**
+ * @template {keyof HTMLElementTagNameMap} K
+ * @param {K} name
+ * @returns {HTMLElementTagNameMap[K]}
+ */
+function element(name) {
+	return document.createElement(name);
+}
+
+/**
+ * @param {string} data
+ * @returns {Text}
+ */
+function text(data) {
+	return document.createTextNode(data);
+}
+
+/**
+ * @returns {Text} */
+function space() {
+	return text(' ');
+}
+
+/**
+ * @param {EventTarget} node
+ * @param {string} event
+ * @param {EventListenerOrEventListenerObject} handler
+ * @param {boolean | AddEventListenerOptions | EventListenerOptions} [options]
+ * @returns {() => void}
+ */
+function listen(node, event, handler, options) {
+	node.addEventListener(event, handler, options);
+	return () => node.removeEventListener(event, handler, options);
+}
+
+/**
+ * @param {Element} node
+ * @param {string} attribute
+ * @param {string} [value]
+ * @returns {void}
+ */
+function attr(node, attribute, value) {
+	if (value == null) node.removeAttribute(attribute);
+	else if (node.getAttribute(attribute) !== value) node.setAttribute(attribute, value);
+}
+
+/**
+ * @param {Element} element
+ * @returns {ChildNode[]}
+ */
+function children(element) {
+	return Array.from(element.childNodes);
+}
+
+/**
+ * @param {Text} text
+ * @param {unknown} data
+ * @returns {void}
+ */
+function set_data(text, data) {
+	data = '' + data;
+	if (text.data === data) return;
+	text.data = /** @type {string} */ (data);
+}
+
+/**
+ * @returns {void} */
+function toggle_class(element, name, toggle) {
+	// The `!!` is required because an `undefined` flag means flipping the current state.
+	element.classList.toggle(name, !!toggle);
+}
+
+/**
+ * @typedef {Node & {
+ * 	claim_order?: number;
+ * 	hydrate_init?: true;
+ * 	actual_end_child?: NodeEx;
+ * 	childNodes: NodeListOf<NodeEx>;
+ * }} NodeEx
+ */
+
+/** @typedef {ChildNode & NodeEx} ChildNodeEx */
+
+/** @typedef {NodeEx & { claim_order: number }} NodeEx2 */
+
+/**
+ * @typedef {ChildNodeEx[] & {
+ * 	claim_info?: {
+ * 		last_index: number;
+ * 		total_claimed: number;
+ * 	};
+ * }} ChildNodeArray
+ */
+
+let current_component;
+
+/** @returns {void} */
+function set_current_component(component) {
+	current_component = component;
+}
+
+function get_current_component() {
+	if (!current_component) throw new Error('Function called outside component initialization');
+	return current_component;
+}
+
+/**
+ * The `onMount` function schedules a callback to run as soon as the component has been mounted to the DOM.
+ * It must be called during the component's initialisation (but doesn't need to live *inside* the component;
+ * it can be called from an external module).
+ *
+ * If a function is returned _synchronously_ from `onMount`, it will be called when the component is unmounted.
+ *
+ * `onMount` does not run inside a [server-side component](https://svelte.dev/docs#run-time-server-side-component-api).
+ *
+ * https://svelte.dev/docs/svelte#onmount
+ * @template T
+ * @param {() => import('./private.js').NotFunction<T> | Promise<import('./private.js').NotFunction<T>> | (() => any)} fn
+ * @returns {void}
+ */
+function onMount(fn) {
+	get_current_component().$$.on_mount.push(fn);
+}
+
+/**
+ * Schedules a callback to run immediately before the component is unmounted.
+ *
+ * Out of `onMount`, `beforeUpdate`, `afterUpdate` and `onDestroy`, this is the
+ * only one that runs inside a server-side component.
+ *
+ * https://svelte.dev/docs/svelte#ondestroy
+ * @param {() => any} fn
+ * @returns {void}
+ */
+function onDestroy(fn) {
+	get_current_component().$$.on_destroy.push(fn);
+}
+
+const dirty_components = [];
+const binding_callbacks = [];
+
+let render_callbacks = [];
+
+const flush_callbacks = [];
+
+const resolved_promise = /* @__PURE__ */ Promise.resolve();
+
+let update_scheduled = false;
+
+/** @returns {void} */
+function schedule_update() {
+	if (!update_scheduled) {
+		update_scheduled = true;
+		resolved_promise.then(flush);
+	}
+}
+
+/** @returns {void} */
+function add_render_callback(fn) {
+	render_callbacks.push(fn);
+}
+
+// flush() calls callbacks in this order:
+// 1. All beforeUpdate callbacks, in order: parents before children
+// 2. All bind:this callbacks, in reverse order: children before parents.
+// 3. All afterUpdate callbacks, in order: parents before children. EXCEPT
+//    for afterUpdates called during the initial onMount, which are called in
+//    reverse order: children before parents.
+// Since callbacks might update component values, which could trigger another
+// call to flush(), the following steps guard against this:
+// 1. During beforeUpdate, any updated components will be added to the
+//    dirty_components array and will cause a reentrant call to flush(). Because
+//    the flush index is kept outside the function, the reentrant call will pick
+//    up where the earlier call left off and go through all dirty components. The
+//    current_component value is saved and restored so that the reentrant call will
+//    not interfere with the "parent" flush() call.
+// 2. bind:this callbacks cannot trigger new flush() calls.
+// 3. During afterUpdate, any updated components will NOT have their afterUpdate
+//    callback called a second time; the seen_callbacks set, outside the flush()
+//    function, guarantees this behavior.
+const seen_callbacks = new Set();
+
+let flushidx = 0; // Do *not* move this inside the flush() function
+
+/** @returns {void} */
+function flush() {
+	// Do not reenter flush while dirty components are updated, as this can
+	// result in an infinite loop. Instead, let the inner flush handle it.
+	// Reentrancy is ok afterwards for bindings etc.
+	if (flushidx !== 0) {
+		return;
+	}
+	const saved_component = current_component;
+	do {
+		// first, call beforeUpdate functions
+		// and update components
+		try {
+			while (flushidx < dirty_components.length) {
+				const component = dirty_components[flushidx];
+				flushidx++;
+				set_current_component(component);
+				update(component.$$);
+			}
+		} catch (e) {
+			// reset dirty state to not end up in a deadlocked state and then rethrow
+			dirty_components.length = 0;
+			flushidx = 0;
+			throw e;
+		}
+		set_current_component(null);
+		dirty_components.length = 0;
+		flushidx = 0;
+		while (binding_callbacks.length) binding_callbacks.pop()();
+		// then, once components are updated, call
+		// afterUpdate functions. This may cause
+		// subsequent updates...
+		for (let i = 0; i < render_callbacks.length; i += 1) {
+			const callback = render_callbacks[i];
+			if (!seen_callbacks.has(callback)) {
+				// ...so guard against infinite loops
+				seen_callbacks.add(callback);
+				callback();
+			}
+		}
+		render_callbacks.length = 0;
+	} while (dirty_components.length);
+	while (flush_callbacks.length) {
+		flush_callbacks.pop()();
+	}
+	update_scheduled = false;
+	seen_callbacks.clear();
+	set_current_component(saved_component);
+}
+
+/** @returns {void} */
+function update($$) {
+	if ($$.fragment !== null) {
+		$$.update();
+		run_all($$.before_update);
+		const dirty = $$.dirty;
+		$$.dirty = [-1];
+		$$.fragment && $$.fragment.p($$.ctx, dirty);
+		$$.after_update.forEach(add_render_callback);
+	}
+}
+
+/**
+ * Useful for example to execute remaining `afterUpdate` callbacks before executing `destroy`.
+ * @param {Function[]} fns
+ * @returns {void}
+ */
+function flush_render_callbacks(fns) {
+	const filtered = [];
+	const targets = [];
+	render_callbacks.forEach((c) => (fns.indexOf(c) === -1 ? filtered.push(c) : targets.push(c)));
+	targets.forEach((c) => c());
+	render_callbacks = filtered;
+}
+
+const outroing = new Set();
+
+/**
+ * @param {import('./private.js').Fragment} block
+ * @param {0 | 1} [local]
+ * @returns {void}
+ */
+function transition_in(block, local) {
+	if (block && block.i) {
+		outroing.delete(block);
+		block.i(local);
+	}
+}
+
+/** @typedef {1} INTRO */
+/** @typedef {0} OUTRO */
+/** @typedef {{ direction: 'in' | 'out' | 'both' }} TransitionOptions */
+/** @typedef {(node: Element, params: any, options: TransitionOptions) => import('../transition/public.js').TransitionConfig} TransitionFn */
+
+/**
+ * @typedef {Object} Outro
+ * @property {number} r
+ * @property {Function[]} c
+ * @property {Object} p
+ */
+
+/**
+ * @typedef {Object} PendingProgram
+ * @property {number} start
+ * @property {INTRO|OUTRO} b
+ * @property {Outro} [group]
+ */
+
+/**
+ * @typedef {Object} Program
+ * @property {number} a
+ * @property {INTRO|OUTRO} b
+ * @property {1|-1} d
+ * @property {number} duration
+ * @property {number} start
+ * @property {number} end
+ * @property {Outro} [group]
+ */
+
+// general each functions:
+
+function ensure_array_like(array_like_or_iterator) {
+	return array_like_or_iterator?.length !== undefined
+		? array_like_or_iterator
+		: Array.from(array_like_or_iterator);
+}
+
+/** @returns {void} */
+function mount_component(component, target, anchor) {
+	const { fragment, after_update } = component.$$;
+	fragment && fragment.m(target, anchor);
+	// onMount happens before the initial afterUpdate
+	add_render_callback(() => {
+		const new_on_destroy = component.$$.on_mount.map(run).filter(is_function);
+		// if the component was destroyed immediately
+		// it will update the `$$.on_destroy` reference to `null`.
+		// the destructured on_destroy may still reference to the old array
+		if (component.$$.on_destroy) {
+			component.$$.on_destroy.push(...new_on_destroy);
+		} else {
+			// Edge case - component was destroyed immediately,
+			// most likely as a result of a binding initialising
+			run_all(new_on_destroy);
+		}
+		component.$$.on_mount = [];
+	});
+	after_update.forEach(add_render_callback);
+}
+
+/** @returns {void} */
+function destroy_component(component, detaching) {
+	const $$ = component.$$;
+	if ($$.fragment !== null) {
+		flush_render_callbacks($$.after_update);
+		run_all($$.on_destroy);
+		$$.fragment && $$.fragment.d(detaching);
+		// TODO null out other refs, including component.$$ (but need to
+		// preserve final state?)
+		$$.on_destroy = $$.fragment = null;
+		$$.ctx = [];
+	}
+}
+
+/** @returns {void} */
+function make_dirty(component, i) {
+	if (component.$$.dirty[0] === -1) {
+		dirty_components.push(component);
+		schedule_update();
+		component.$$.dirty.fill(0);
+	}
+	component.$$.dirty[(i / 31) | 0] |= 1 << i % 31;
+}
+
+// TODO: Document the other params
+/**
+ * @param {SvelteComponent} component
+ * @param {import('./public.js').ComponentConstructorOptions} options
+ *
+ * @param {import('./utils.js')['not_equal']} not_equal Used to compare props and state values.
+ * @param {(target: Element | ShadowRoot) => void} [append_styles] Function that appends styles to the DOM when the component is first initialised.
+ * This will be the `add_css` function from the compiled component.
+ *
+ * @returns {void}
+ */
+function init(
+	component,
+	options,
+	instance,
+	create_fragment,
+	not_equal,
+	props,
+	append_styles = null,
+	dirty = [-1]
+) {
+	const parent_component = current_component;
+	set_current_component(component);
+	/** @type {import('./private.js').T$$} */
+	const $$ = (component.$$ = {
+		fragment: null,
+		ctx: [],
+		// state
+		props,
+		update: noop,
+		not_equal,
+		bound: blank_object(),
+		// lifecycle
+		on_mount: [],
+		on_destroy: [],
+		on_disconnect: [],
+		before_update: [],
+		after_update: [],
+		context: new Map(options.context || (parent_component ? parent_component.$$.context : [])),
+		// everything else
+		callbacks: blank_object(),
+		dirty,
+		skip_bound: false,
+		root: options.target || parent_component.$$.root
+	});
+	append_styles && append_styles($$.root);
+	let ready = false;
+	$$.ctx = instance
+		? instance(component, options.props || {}, (i, ret, ...rest) => {
+				const value = rest.length ? rest[0] : ret;
+				if ($$.ctx && not_equal($$.ctx[i], ($$.ctx[i] = value))) {
+					if (!$$.skip_bound && $$.bound[i]) $$.bound[i](value);
+					if (ready) make_dirty(component, i);
+				}
+				return ret;
+		  })
+		: [];
+	$$.update();
+	ready = true;
+	run_all($$.before_update);
+	// `false` as a special case of no DOM component
+	$$.fragment = create_fragment ? create_fragment($$.ctx) : false;
+	if (options.target) {
+		if (options.hydrate) {
+			// TODO: what is the correct type here?
+			// @ts-expect-error
+			const nodes = children(options.target);
+			$$.fragment && $$.fragment.l(nodes);
+			nodes.forEach(detach);
+		} else {
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			$$.fragment && $$.fragment.c();
+		}
+		if (options.intro) transition_in(component.$$.fragment);
+		mount_component(component, options.target, options.anchor);
+		flush();
+	}
+	set_current_component(parent_component);
+}
+
+/**
+ * Base class for Svelte components. Used when dev=false.
+ *
+ * @template {Record<string, any>} [Props=any]
+ * @template {Record<string, any>} [Events=any]
+ */
+class SvelteComponent {
+	/**
+	 * ### PRIVATE API
+	 *
+	 * Do not use, may change at any time
+	 *
+	 * @type {any}
+	 */
+	$$ = undefined;
+	/**
+	 * ### PRIVATE API
+	 *
+	 * Do not use, may change at any time
+	 *
+	 * @type {any}
+	 */
+	$$set = undefined;
+
+	/** @returns {void} */
+	$destroy() {
+		destroy_component(this, 1);
+		this.$destroy = noop;
+	}
+
+	/**
+	 * @template {Extract<keyof Events, string>} K
+	 * @param {K} type
+	 * @param {((e: Events[K]) => void) | null | undefined} callback
+	 * @returns {() => void}
+	 */
+	$on(type, callback) {
+		if (!is_function(callback)) {
+			return noop;
+		}
+		const callbacks = this.$$.callbacks[type] || (this.$$.callbacks[type] = []);
+		callbacks.push(callback);
+		return () => {
+			const index = callbacks.indexOf(callback);
+			if (index !== -1) callbacks.splice(index, 1);
+		};
+	}
+
+	/**
+	 * @param {Partial<Props>} props
+	 * @returns {void}
+	 */
+	$set(props) {
+		if (this.$$set && !is_empty(props)) {
+			this.$$.skip_bound = true;
+			this.$$set(props);
+			this.$$.skip_bound = false;
+		}
+	}
+}
+
+/**
+ * @typedef {Object} CustomElementPropDefinition
+ * @property {string} [attribute]
+ * @property {boolean} [reflect]
+ * @property {'String'|'Boolean'|'Number'|'Array'|'Object'} [type]
+ */
+
+// generated during release, do not modify
+
+const PUBLIC_VERSION = '4';
+
+if (typeof window !== 'undefined')
+	// @ts-ignore
+	(window.__svelte || (window.__svelte = { v: new Set() })).v.add(PUBLIC_VERSION);
+
+const chartBaseUrl = 'https://vrijeme.hr/plutace';
+// WGS84 positions and mooring depths published for the Croatian state
+// meteorological-oceanographic buoy network (Narodne novine 5/2026).
+const buoys = [
+    {
+        id: 'Kvarner',
+        name: 'Kvarner',
+        lat: 44.6916,
+        lon: 14.151944,
+        mooringDepth: 48.3,
+        chartUrl: `${chartBaseUrl}/plutaca-Kvarner-en.png`
+    },
+    {
+        id: 'Blitvenica',
+        name: 'Blitvenica',
+        lat: 43.598064,
+        lon: 15.569719,
+        mooringDepth: 211.3,
+        chartUrl: `${chartBaseUrl}/plutaca-Blitvenica-en.png`
+    },
+    {
+        id: 'Viski_kanal',
+        name: 'Viški kanal',
+        lat: 43.146294,
+        lon: 16.112647,
+        mooringDepth: 104.5,
+        chartUrl: `${chartBaseUrl}/plutaca-Viski_kanal-en.png`
+    },
+    {
+        id: 'Palagruza',
+        name: 'Palagruža',
+        lat: 42.489547,
+        lon: 16.401208,
+        mooringDepth: 188.5,
+        chartUrl: `${chartBaseUrl}/plutaca-Palagruza-en.png`
+    },
+    {
+        id: 'Molunat',
+        name: 'Molunat',
+        lat: 42.394317,
+        lon: 18.358931,
+        mooringDepth: 154,
+        chartUrl: `${chartBaseUrl}/plutaca-Molunat-en.png`
+    }
+];
+const networkCenter = {
+    lat: 43.45,
+    lon: 16.2
+};
+const dhmzSourceUrl = 'https://meteo.hr/podaci_e.php?section=podaci_vrijeme&param=mop';
+
+const config = {
+    title: 'Croatian Met-ocean Buoys'};
+
+/* src/plugin.svelte generated by Svelte v4.2.20 */
+
+function add_css(target) {
+	append_styles(target, "svelte-lmw24j", ".buoy-plugin.svelte-lmw24j.svelte-lmw24j{--navy:#0a2638;--navy-soft:#163d53;--sea:#0d8aa5;--aqua:#8ee3e8;--foam:#eef9f8;--signal:#ffd747;--ink-muted:#5f717a;--line:#d9e5e8;color:var(--navy);padding-bottom:24px}.intro.svelte-lmw24j.svelte-lmw24j{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin:18px 0 16px}.intro__copy.svelte-lmw24j.svelte-lmw24j{max-width:310px;margin:5px 0 0;color:var(--ink-muted);font-size:14px;line-height:1.45}.eyebrow.svelte-lmw24j.svelte-lmw24j{color:var(--sea);font-size:11px;font-weight:700;letter-spacing:0.11em;text-transform:uppercase}.map-button.svelte-lmw24j.svelte-lmw24j,.refresh-button.svelte-lmw24j.svelte-lmw24j,.station-pill.svelte-lmw24j.svelte-lmw24j,.view-toggle.svelte-lmw24j button.svelte-lmw24j{border:0;font:inherit;cursor:pointer}.map-button.svelte-lmw24j.svelte-lmw24j{display:inline-flex;flex:0 0 auto;align-items:center;gap:6px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:white;color:var(--navy-soft);font-size:12px;font-weight:600}.map-button.svelte-lmw24j.svelte-lmw24j:hover{border-color:var(--sea)}.station-strip.svelte-lmw24j.svelte-lmw24j{display:flex;gap:7px;margin:0 -10px 16px;padding:1px 10px 8px;overflow-x:auto;scrollbar-width:thin}.station-pill.svelte-lmw24j.svelte-lmw24j{display:inline-flex;flex:0 0 auto;align-items:center;gap:7px;min-height:36px;padding:0 12px;border:1px solid var(--line);border-radius:999px;background:#f7fafb;color:var(--navy-soft);font-size:12px;font-weight:600}.station-pill__dot.svelte-lmw24j.svelte-lmw24j{width:7px;height:7px;border-radius:50%;background:#9cabb1}.station-pill.svelte-lmw24j.svelte-lmw24j:hover{border-color:#9ec9d2;background:white}.station-pill.is-selected.svelte-lmw24j.svelte-lmw24j{border-color:var(--navy);background:var(--navy);color:white}.station-pill.is-selected.svelte-lmw24j .station-pill__dot.svelte-lmw24j{background:var(--signal);box-shadow:0 0 0 3px rgba(255, 215, 71, 0.18)}.observation-card.svelte-lmw24j.svelte-lmw24j{overflow:hidden;border:1px solid #ccdde1;border-radius:14px;background:white;box-shadow:0 8px 25px rgba(10, 38, 56, 0.09)}.observation-card__header.svelte-lmw24j.svelte-lmw24j{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:16px 16px 13px;background:linear-gradient(145deg, #f8fcfc 0%, #eaf7f7 100%)}.observation-card__header.svelte-lmw24j h2.svelte-lmw24j{margin:4px 0 3px;color:var(--navy);font-size:23px;font-weight:650;line-height:1.15}.observation-card__header.svelte-lmw24j p.svelte-lmw24j{margin:0;color:var(--ink-muted);font-size:11px;line-height:1.45}.observation-card__footer.svelte-lmw24j.svelte-lmw24j{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 14px;border-top:1px solid var(--line);color:var(--ink-muted);font-size:11px}.observation-card__footer.svelte-lmw24j a.svelte-lmw24j{color:var(--sea);font-weight:700;text-decoration:none}.live-label.svelte-lmw24j.svelte-lmw24j{display:inline-flex;align-items:center;gap:6px;color:var(--sea);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase}.live-label.svelte-lmw24j span.svelte-lmw24j{width:7px;height:7px;border-radius:50%;background:#35b779;box-shadow:0 0 0 3px rgba(53, 183, 121, 0.15)}.refresh-button.svelte-lmw24j.svelte-lmw24j{display:grid;flex:0 0 34px;width:34px;height:34px;place-items:center;border:1px solid #c9dfe2;border-radius:50%;background:white;color:var(--sea);font-size:22px;line-height:1}.refresh-button.svelte-lmw24j.svelte-lmw24j:hover{border-color:var(--sea)}.refresh-button.is-loading.svelte-lmw24j.svelte-lmw24j{animation:svelte-lmw24j-spin 1s linear infinite}.chart-toolbar.svelte-lmw24j.svelte-lmw24j{display:flex;align-items:center;justify-content:space-between;min-height:38px;padding:0 12px 0 14px;border-top:1px solid rgba(204, 221, 225, 0.7);border-bottom:1px solid var(--line);color:var(--ink-muted);font-size:11px}.view-toggle.svelte-lmw24j.svelte-lmw24j{display:inline-flex;padding:2px;border-radius:7px;background:#e7eff1}.view-toggle.svelte-lmw24j button.svelte-lmw24j{padding:4px 7px;border-radius:5px;background:transparent;color:var(--ink-muted);font-size:10px}.view-toggle.svelte-lmw24j button.is-active.svelte-lmw24j{background:white;color:var(--navy);box-shadow:0 1px 3px rgba(10, 38, 56, 0.15)}.chart-viewport.svelte-lmw24j.svelte-lmw24j{position:relative;min-height:180px;max-height:535px;overflow:auto;background:linear-gradient(90deg, rgba(220, 235, 237, 0.3) 1px, transparent 1px) 0 0px 18px, linear-gradient(rgba(220, 235, 237, 0.3) 1px, transparent 1px) 0 0px 18px, #fbfdfd}.chart-viewport.svelte-lmw24j img.svelte-lmw24j{display:block;width:100%;height:auto;background:white}.chart-viewport.is-full.svelte-lmw24j img.svelte-lmw24j{width:1000px;max-width:none}.chart-viewport.svelte-lmw24j img.is-hidden.svelte-lmw24j{display:none}.chart-error.svelte-lmw24j.svelte-lmw24j{display:flex;min-height:180px;flex-direction:column;align-items:center;justify-content:center;padding:24px;color:var(--ink-muted);text-align:center}.chart-error.svelte-lmw24j>span.svelte-lmw24j{display:grid;width:45px;height:45px;margin-bottom:12px;place-items:center;border-radius:50%;background:#dff2f3;color:var(--sea);font-size:26px}.chart-error.svelte-lmw24j strong.svelte-lmw24j{color:var(--navy)}.chart-error.svelte-lmw24j p.svelte-lmw24j{margin:5px 0 0;font-size:12px}.notice.svelte-lmw24j.svelte-lmw24j{display:flex;gap:10px;margin-top:14px;padding:12px 13px;border:1px solid #efd989;border-radius:10px;background:#fff9df}.notice__icon.svelte-lmw24j.svelte-lmw24j{display:grid;flex:0 0 20px;width:20px;height:20px;place-items:center;border-radius:50%;background:var(--signal);color:#4c4000;font-size:12px;font-weight:800}.notice.svelte-lmw24j p.svelte-lmw24j{margin:0;color:#635923;font-size:11px;line-height:1.5}.source-line.svelte-lmw24j.svelte-lmw24j{margin:14px 2px 0;color:var(--ink-muted);font-size:11px;line-height:1.45}.source-line.svelte-lmw24j a.svelte-lmw24j{color:var(--sea);font-weight:600;text-decoration:none}.dhmz-buoy-marker{position:relative;border:0;background:transparent}.dhmz-buoy-marker__halo{position:absolute;inset:4px;border-radius:50%;background:rgba(255, 215, 71, 0.28);animation:svelte-lmw24j-buoy-pulse 2.5s ease-out infinite}.dhmz-buoy-marker__core{position:absolute;inset:7px;display:grid;place-items:center;border:2px solid white;border-radius:50%;background:#ffd747;color:#0a2638;box-shadow:0 3px 12px rgba(10, 38, 56, 0.45);font-size:17px;font-weight:800;line-height:1;transition:transform 0.15s ease}.dhmz-buoy-marker:hover .dhmz-buoy-marker__core,.dhmz-buoy-marker.is-selected .dhmz-buoy-marker__core{transform:scale(1.22);background:#8ee3e8}.dhmz-buoy-marker.is-selected .dhmz-buoy-marker__halo{background:rgba(142, 227, 232, 0.35);animation-duration:1.6s}@keyframes svelte-lmw24j-spin{to{transform:rotate(360deg)}}@keyframes svelte-lmw24j-buoy-pulse{0%{opacity:0.9;transform:scale(0.75)}70%,100%{opacity:0;transform:scale(1.4)}}@media(max-width: 430px){.intro.svelte-lmw24j.svelte-lmw24j{margin-top:14px}.observation-card.svelte-lmw24j.svelte-lmw24j{border-radius:12px}.chart-viewport.svelte-lmw24j.svelte-lmw24j{max-height:52vh}}@media(prefers-reduced-motion: reduce){.refresh-button.is-loading.svelte-lmw24j.svelte-lmw24j,.dhmz-buoy-marker__halo{animation:none}}");
+}
+
+function get_each_context(ctx, list, i) {
+	const child_ctx = ctx.slice();
+	child_ctx[28] = list[i];
+	return child_ctx;
+}
+
+// (27:8) {#each buoys as buoy}
+function create_each_block(ctx) {
+	let button;
+	let span0;
+	let t0;
+	let span1;
+	let t2;
+	let button_aria_pressed_value;
+	let mounted;
+	let dispose;
+
+	function click_handler_1() {
+		return /*click_handler_1*/ ctx[17](/*buoy*/ ctx[28]);
+	}
+
+	return {
+		c() {
+			button = element("button");
+			span0 = element("span");
+			t0 = space();
+			span1 = element("span");
+			span1.textContent = `${/*buoy*/ ctx[28].name}`;
+			t2 = space();
+			attr(span0, "class", "station-pill__dot svelte-lmw24j");
+			attr(span0, "aria-hidden", "true");
+			attr(button, "class", "station-pill svelte-lmw24j");
+			attr(button, "type", "button");
+			attr(button, "aria-pressed", button_aria_pressed_value = /*selectedBuoy*/ ctx[0].id === /*buoy*/ ctx[28].id);
+			toggle_class(button, "is-selected", /*selectedBuoy*/ ctx[0].id === /*buoy*/ ctx[28].id);
+		},
+		m(target, anchor) {
+			insert(target, button, anchor);
+			append(button, span0);
+			append(button, t0);
+			append(button, span1);
+			append(button, t2);
+
+			if (!mounted) {
+				dispose = listen(button, "click", click_handler_1);
+				mounted = true;
+			}
+		},
+		p(new_ctx, dirty) {
+			ctx = new_ctx;
+
+			if (dirty & /*selectedBuoy*/ 1 && button_aria_pressed_value !== (button_aria_pressed_value = /*selectedBuoy*/ ctx[0].id === /*buoy*/ ctx[28].id)) {
+				attr(button, "aria-pressed", button_aria_pressed_value);
+			}
+
+			if (dirty & /*selectedBuoy*/ 1) {
+				toggle_class(button, "is-selected", /*selectedBuoy*/ ctx[0].id === /*buoy*/ ctx[28].id);
+			}
+		},
+		d(detaching) {
+			if (detaching) {
+				detach(button);
+			}
+
+			mounted = false;
+			dispose();
+		}
+	};
+}
+
+// (81:12) {#if chartFailed}
+function create_if_block(ctx) {
+	let div;
+
+	return {
+		c() {
+			div = element("div");
+			div.innerHTML = `<span aria-hidden="true" class="svelte-lmw24j">≈</span> <strong class="svelte-lmw24j">The DHMZ chart could not be loaded.</strong> <p class="svelte-lmw24j">Try refreshing, or open the source page below.</p>`;
+			attr(div, "class", "chart-error svelte-lmw24j");
+		},
+		m(target, anchor) {
+			insert(target, div, anchor);
+		},
+		d(detaching) {
+			if (detaching) {
+				detach(div);
+			}
+		}
+	};
+}
+
+function create_fragment(ctx) {
+	let div0;
+	let t1;
+	let section;
+	let div1;
+	let t3;
+	let div3;
+	let div2;
+	let t7;
+	let button0;
+	let t10;
+	let div4;
+	let t11;
+	let article;
+	let header;
+	let div5;
+	let span3;
+	let t13;
+	let h2;
+	let t14_value = /*selectedBuoy*/ ctx[0].name + "";
+	let t14;
+	let t15;
+	let p1;
+	let t16_value = /*formatCoordinate*/ ctx[7](/*selectedBuoy*/ ctx[0].lat, 'N', 'S') + "";
+	let t16;
+	let t17;
+	let t18_value = /*formatCoordinate*/ ctx[7](/*selectedBuoy*/ ctx[0].lon, 'E', 'W') + "";
+	let t18;
+	let t19;
+	let t20_value = /*selectedBuoy*/ ctx[0].mooringDepth.toFixed(1) + "";
+	let t20;
+	let t21;
+	let t22;
+	let button1;
+	let t24;
+	let div7;
+	let span4;
+
+	let t25_value = (/*imageLoading*/ ctx[3]
+	? 'Loading latest chart…'
+	: `Checked ${/*formatCheckedAt*/ ctx[8](/*lastChecked*/ ctx[4])}`) + "";
+
+	let t25;
+	let t26;
+	let div6;
+	let button2;
+	let t28;
+	let button3;
+	let t30;
+	let div8;
+	let t31;
+	let img;
+	let img_src_value;
+	let img_alt_value;
+	let t32;
+	let footer;
+	let span5;
+	let t34;
+	let a0;
+	let t35;
+	let a0_href_value;
+	let t36;
+	let div9;
+	let t40;
+	let p3;
+	let mounted;
+	let dispose;
+	let each_value = ensure_array_like(buoys);
+	let each_blocks = [];
+
+	for (let i = 0; i < each_value.length; i += 1) {
+		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+	}
+
+	let if_block = /*chartFailed*/ ctx[2] && create_if_block();
+
+	return {
+		c() {
+			div0 = element("div");
+			div0.textContent = `${/*title*/ ctx[6]}`;
+			t1 = space();
+			section = element("section");
+			div1 = element("div");
+			div1.textContent = `${/*title*/ ctx[6]}`;
+			t3 = space();
+			div3 = element("div");
+			div2 = element("div");
+			div2.innerHTML = `<span class="eyebrow svelte-lmw24j">DHMZ observations</span> <p class="intro__copy svelte-lmw24j">Live meteorological and oceanographic charts from five Croatian Adriatic buoys.</p>`;
+			t7 = space();
+			button0 = element("button");
+
+			button0.innerHTML = `<span aria-hidden="true">⌖</span>
+            All buoys`;
+
+			t10 = space();
+			div4 = element("div");
+
+			for (let i = 0; i < each_blocks.length; i += 1) {
+				each_blocks[i].c();
+			}
+
+			t11 = space();
+			article = element("article");
+			header = element("header");
+			div5 = element("div");
+			span3 = element("span");
+			span3.innerHTML = `<span aria-hidden="true" class="svelte-lmw24j"></span> Official chart`;
+			t13 = space();
+			h2 = element("h2");
+			t14 = text(t14_value);
+			t15 = space();
+			p1 = element("p");
+			t16 = text(t16_value);
+			t17 = text(" ·\n                    ");
+			t18 = text(t18_value);
+			t19 = text(" ·\n                    ");
+			t20 = text(t20_value);
+			t21 = text(" m mooring depth");
+			t22 = space();
+			button1 = element("button");
+			button1.textContent = "↻";
+			t24 = space();
+			div7 = element("div");
+			span4 = element("span");
+			t25 = text(t25_value);
+			t26 = space();
+			div6 = element("div");
+			button2 = element("button");
+			button2.textContent = "Fit";
+			t28 = space();
+			button3 = element("button");
+			button3.textContent = "100%";
+			t30 = space();
+			div8 = element("div");
+			if (if_block) if_block.c();
+			t31 = space();
+			img = element("img");
+			t32 = space();
+			footer = element("footer");
+			span5 = element("span");
+			span5.textContent = "Auto-refreshes every 10 minutes";
+			t34 = space();
+			a0 = element("a");
+			t35 = text("Open full chart ↗");
+			t36 = space();
+			div9 = element("div");
+
+			div9.innerHTML = `<span class="notice__icon svelte-lmw24j" aria-hidden="true">i</span> <p class="svelte-lmw24j">DHMZ publishes original, uncontrolled measurements. Values may be missing or may
+            deviate from actual conditions; do not use this display as the sole source for
+            safety-critical decisions.</p>`;
+
+			t40 = space();
+			p3 = element("p");
+
+			p3.innerHTML = `Data and charts:
+        <a href="${dhmzSourceUrl}" target="_blank" rel="noreferrer" class="svelte-lmw24j">Croatian Meteorological and Hydrological Service (DHMZ) ↗</a>`;
+
+			attr(div0, "class", "plugin__mobile-header");
+			attr(div1, "class", "plugin__title plugin__title--chevron-back");
+			attr(button0, "class", "map-button svelte-lmw24j");
+			attr(button0, "type", "button");
+			attr(button0, "title", "Show all buoys");
+			attr(div3, "class", "intro svelte-lmw24j");
+			attr(div4, "class", "station-strip svelte-lmw24j");
+			attr(div4, "aria-label", "Select a buoy");
+			attr(span3, "class", "live-label svelte-lmw24j");
+			attr(h2, "class", "svelte-lmw24j");
+			attr(p1, "class", "svelte-lmw24j");
+			attr(button1, "class", "refresh-button svelte-lmw24j");
+			attr(button1, "type", "button");
+			attr(button1, "aria-label", "Refresh the buoy chart");
+			attr(button1, "title", "Refresh chart");
+			toggle_class(button1, "is-loading", /*imageLoading*/ ctx[3]);
+			attr(header, "class", "observation-card__header svelte-lmw24j");
+			attr(button2, "type", "button");
+			attr(button2, "class", "svelte-lmw24j");
+			toggle_class(button2, "is-active", /*viewMode*/ ctx[5] === 'fit');
+			attr(button3, "type", "button");
+			attr(button3, "class", "svelte-lmw24j");
+			toggle_class(button3, "is-active", /*viewMode*/ ctx[5] === 'full');
+			attr(div6, "class", "view-toggle svelte-lmw24j");
+			attr(div6, "aria-label", "Chart size");
+			attr(div7, "class", "chart-toolbar svelte-lmw24j");
+			if (!src_url_equal(img.src, img_src_value = /*chartSrc*/ ctx[1])) attr(img, "src", img_src_value);
+			attr(img, "alt", img_alt_value = `Latest DHMZ meteorological and oceanographic observations for ${/*selectedBuoy*/ ctx[0].name}`);
+			attr(img, "class", "svelte-lmw24j");
+			toggle_class(img, "is-hidden", /*chartFailed*/ ctx[2]);
+			attr(div8, "class", "chart-viewport svelte-lmw24j");
+			toggle_class(div8, "is-full", /*viewMode*/ ctx[5] === 'full');
+			attr(a0, "href", a0_href_value = /*selectedBuoy*/ ctx[0].chartUrl);
+			attr(a0, "target", "_blank");
+			attr(a0, "rel", "noreferrer");
+			attr(a0, "class", "svelte-lmw24j");
+			attr(footer, "class", "observation-card__footer svelte-lmw24j");
+			attr(article, "class", "observation-card svelte-lmw24j");
+			attr(div9, "class", "notice svelte-lmw24j");
+			attr(p3, "class", "source-line svelte-lmw24j");
+			attr(section, "class", "plugin__content buoy-plugin svelte-lmw24j");
+		},
+		m(target, anchor) {
+			insert(target, div0, anchor);
+			insert(target, t1, anchor);
+			insert(target, section, anchor);
+			append(section, div1);
+			append(section, t3);
+			append(section, div3);
+			append(div3, div2);
+			append(div3, t7);
+			append(div3, button0);
+			append(section, t10);
+			append(section, div4);
+
+			for (let i = 0; i < each_blocks.length; i += 1) {
+				if (each_blocks[i]) {
+					each_blocks[i].m(div4, null);
+				}
+			}
+
+			append(section, t11);
+			append(section, article);
+			append(article, header);
+			append(header, div5);
+			append(div5, span3);
+			append(div5, t13);
+			append(div5, h2);
+			append(h2, t14);
+			append(div5, t15);
+			append(div5, p1);
+			append(p1, t16);
+			append(p1, t17);
+			append(p1, t18);
+			append(p1, t19);
+			append(p1, t20);
+			append(p1, t21);
+			append(header, t22);
+			append(header, button1);
+			append(article, t24);
+			append(article, div7);
+			append(div7, span4);
+			append(span4, t25);
+			append(div7, t26);
+			append(div7, div6);
+			append(div6, button2);
+			append(div6, t28);
+			append(div6, button3);
+			append(article, t30);
+			append(article, div8);
+			if (if_block) if_block.m(div8, null);
+			append(div8, t31);
+			append(div8, img);
+			append(article, t32);
+			append(article, footer);
+			append(footer, span5);
+			append(footer, t34);
+			append(footer, a0);
+			append(a0, t35);
+			append(section, t36);
+			append(section, div9);
+			append(section, t40);
+			append(section, p3);
+
+			if (!mounted) {
+				dispose = [
+					listen(div1, "click", /*click_handler*/ ctx[16]),
+					listen(button0, "click", /*showAllBuoys*/ ctx[11]),
+					listen(button1, "click", /*refreshData*/ ctx[9]),
+					listen(button2, "click", /*click_handler_2*/ ctx[18]),
+					listen(button3, "click", /*click_handler_3*/ ctx[19]),
+					listen(img, "load", /*handleChartLoaded*/ ctx[12]),
+					listen(img, "error", /*handleChartError*/ ctx[13])
+				];
+
+				mounted = true;
+			}
+		},
+		p(ctx, [dirty]) {
+			if (dirty & /*selectedBuoy, selectBuoy*/ 1025) {
+				each_value = ensure_array_like(buoys);
+				let i;
+
+				for (i = 0; i < each_value.length; i += 1) {
+					const child_ctx = get_each_context(ctx, each_value, i);
+
+					if (each_blocks[i]) {
+						each_blocks[i].p(child_ctx, dirty);
+					} else {
+						each_blocks[i] = create_each_block(child_ctx);
+						each_blocks[i].c();
+						each_blocks[i].m(div4, null);
+					}
+				}
+
+				for (; i < each_blocks.length; i += 1) {
+					each_blocks[i].d(1);
+				}
+
+				each_blocks.length = each_value.length;
+			}
+
+			if (dirty & /*selectedBuoy*/ 1 && t14_value !== (t14_value = /*selectedBuoy*/ ctx[0].name + "")) set_data(t14, t14_value);
+			if (dirty & /*selectedBuoy*/ 1 && t16_value !== (t16_value = /*formatCoordinate*/ ctx[7](/*selectedBuoy*/ ctx[0].lat, 'N', 'S') + "")) set_data(t16, t16_value);
+			if (dirty & /*selectedBuoy*/ 1 && t18_value !== (t18_value = /*formatCoordinate*/ ctx[7](/*selectedBuoy*/ ctx[0].lon, 'E', 'W') + "")) set_data(t18, t18_value);
+			if (dirty & /*selectedBuoy*/ 1 && t20_value !== (t20_value = /*selectedBuoy*/ ctx[0].mooringDepth.toFixed(1) + "")) set_data(t20, t20_value);
+
+			if (dirty & /*imageLoading*/ 8) {
+				toggle_class(button1, "is-loading", /*imageLoading*/ ctx[3]);
+			}
+
+			if (dirty & /*imageLoading, lastChecked*/ 24 && t25_value !== (t25_value = (/*imageLoading*/ ctx[3]
+			? 'Loading latest chart…'
+			: `Checked ${/*formatCheckedAt*/ ctx[8](/*lastChecked*/ ctx[4])}`) + "")) set_data(t25, t25_value);
+
+			if (dirty & /*viewMode*/ 32) {
+				toggle_class(button2, "is-active", /*viewMode*/ ctx[5] === 'fit');
+			}
+
+			if (dirty & /*viewMode*/ 32) {
+				toggle_class(button3, "is-active", /*viewMode*/ ctx[5] === 'full');
+			}
+
+			if (/*chartFailed*/ ctx[2]) {
+				if (if_block) ; else {
+					if_block = create_if_block();
+					if_block.c();
+					if_block.m(div8, t31);
+				}
+			} else if (if_block) {
+				if_block.d(1);
+				if_block = null;
+			}
+
+			if (dirty & /*chartSrc*/ 2 && !src_url_equal(img.src, img_src_value = /*chartSrc*/ ctx[1])) {
+				attr(img, "src", img_src_value);
+			}
+
+			if (dirty & /*selectedBuoy*/ 1 && img_alt_value !== (img_alt_value = `Latest DHMZ meteorological and oceanographic observations for ${/*selectedBuoy*/ ctx[0].name}`)) {
+				attr(img, "alt", img_alt_value);
+			}
+
+			if (dirty & /*chartFailed*/ 4) {
+				toggle_class(img, "is-hidden", /*chartFailed*/ ctx[2]);
+			}
+
+			if (dirty & /*viewMode*/ 32) {
+				toggle_class(div8, "is-full", /*viewMode*/ ctx[5] === 'full');
+			}
+
+			if (dirty & /*selectedBuoy*/ 1 && a0_href_value !== (a0_href_value = /*selectedBuoy*/ ctx[0].chartUrl)) {
+				attr(a0, "href", a0_href_value);
+			}
+		},
+		i: noop,
+		o: noop,
+		d(detaching) {
+			if (detaching) {
+				detach(div0);
+				detach(t1);
+				detach(section);
+			}
+
+			destroy_each(each_blocks, detaching);
+			if (if_block) if_block.d();
+			mounted = false;
+			run_all(dispose);
+		}
+	};
+}
+
+function instance($$self, $$props, $$invalidate) {
+	const { title } = config;
+	const refreshIntervalMs = 10 * 60 * 1000;
+	const checkedAtFormatter = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+	let selectedBuoy = buoys[0];
+	let chartVersion = Date.now();
+	let chartSrc = '';
+	let chartFailed = false;
+	let imageLoading = true;
+	let lastChecked = new Date();
+	let viewMode = 'fit';
+	let refreshTimer = null;
+	let buoyMarkers = [];
+	const formatCoordinate = (value, positive, negative) => `${Math.abs(value).toFixed(4)}°${value >= 0 ? positive : negative}`;
+	const formatCheckedAt = date => checkedAtFormatter.format(date);
+
+	const makeBuoyIcon = isSelected => new L.DivIcon({
+			className: `dhmz-buoy-marker${isSelected ? ' is-selected' : ''}`,
+			html: '<span class="dhmz-buoy-marker__halo"></span><span class="dhmz-buoy-marker__core">≈</span>',
+			iconAnchor: [19, 19],
+			iconSize: [38, 38]
+		});
+
+	const updateMarkerSelection = () => {
+		buoyMarkers.forEach(({ buoy, marker }) => {
+			marker.setIcon(makeBuoyIcon(buoy.id === selectedBuoy.id));
+		});
+	};
+
+	const refreshData = () => {
+		$$invalidate(2, chartFailed = false);
+		$$invalidate(3, imageLoading = true);
+		$$invalidate(4, lastChecked = new Date());
+		$$invalidate(15, chartVersion = Date.now());
+	};
+
+	const selectBuoy = (buoy, focusMap = true) => {
+		$$invalidate(0, selectedBuoy = buoy);
+		$$invalidate(5, viewMode = 'fit');
+		updateMarkerSelection();
+		refreshData();
+
+		if (focusMap) {
+			map.setView({ lat: buoy.lat, lng: buoy.lon }, Math.max(map.getZoom(), 7));
+		}
+	};
+
+	const showAllBuoys = () => {
+		map.setView(
+			{
+				lat: networkCenter.lat,
+				lng: networkCenter.lon
+			},
+			6
+		);
+	};
+
+	const addBuoyMarkers = () => {
+		if (buoyMarkers.length > 0) {
+			return;
+		}
+
+		buoyMarkers = buoys.map(buoy => {
+			const marker = new L.Marker({ lat: buoy.lat, lng: buoy.lon },
+			{
+					icon: makeBuoyIcon(buoy.id === selectedBuoy.id)
+				}).addTo(map);
+
+			marker.on('click', () => selectBuoy(buoy, false));
+			return { buoy, marker };
+		});
+	};
+
+	const removeBuoyMarkers = () => {
+		buoyMarkers.forEach(({ marker }) => marker.remove());
+		buoyMarkers = [];
+	};
+
+	const handleChartLoaded = () => {
+		$$invalidate(3, imageLoading = false);
+		$$invalidate(2, chartFailed = false);
+	};
+
+	const handleChartError = () => {
+		$$invalidate(3, imageLoading = false);
+		$$invalidate(2, chartFailed = true);
+	};
+
+	const onopen = () => {
+		addBuoyMarkers();
+		showAllBuoys();
+		refreshData();
+	};
+
+	onMount(() => {
+		refreshTimer = setInterval(refreshData, refreshIntervalMs);
+	});
+
+	onDestroy(() => {
+		removeBuoyMarkers();
+
+		if (refreshTimer) {
+			clearInterval(refreshTimer);
+			refreshTimer = null;
+		}
+	});
+
+	const click_handler = () => bcast.emit('rqstOpen', 'menu');
+	const click_handler_1 = buoy => selectBuoy(buoy);
+	const click_handler_2 = () => $$invalidate(5, viewMode = 'fit');
+	const click_handler_3 = () => $$invalidate(5, viewMode = 'full');
+
+	$$self.$$.update = () => {
+		if ($$self.$$.dirty & /*selectedBuoy, chartVersion*/ 32769) {
+			$$invalidate(1, chartSrc = `${selectedBuoy.chartUrl}?windy-refresh=${chartVersion}`);
+		}
+	};
+
+	return [
+		selectedBuoy,
+		chartSrc,
+		chartFailed,
+		imageLoading,
+		lastChecked,
+		viewMode,
+		title,
+		formatCoordinate,
+		formatCheckedAt,
+		refreshData,
+		selectBuoy,
+		showAllBuoys,
+		handleChartLoaded,
+		handleChartError,
+		onopen,
+		chartVersion,
+		click_handler,
+		click_handler_1,
+		click_handler_2,
+		click_handler_3
+	];
+}
+
+class Plugin extends SvelteComponent {
+	constructor(options) {
+		super();
+		init(this, options, instance, create_fragment, safe_not_equal, { onopen: 14 }, add_css);
+	}
+
+	get onopen() {
+		return this.$$.ctx[14];
+	}
+}
+
+
+// transformCode: Export statement was modified
+export { __pluginConfig, Plugin as default };
+//# sourceMappingURL=plugin.js.map
