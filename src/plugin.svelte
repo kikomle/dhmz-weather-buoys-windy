@@ -14,7 +14,8 @@
         <div>
             <span class="eyebrow">DHMZ observations</span>
             <p class="intro__copy">
-                Live meteorological and oceanographic charts from five Croatian Adriatic buoys.
+                Live charts from five Croatian Adriatic buoys. Map badges show the latest
+                significant wave height.
             </p>
         </div>
         <button class="map-button" type="button" on:click={showAllBuoys} title="Show all buoys">
@@ -49,16 +50,22 @@
                     {selectedBuoy.mooringDepth.toFixed(1)} m mooring depth
                 </p>
             </div>
-            <button
-                class="refresh-button"
-                class:is-loading={imageLoading}
-                type="button"
-                on:click={refreshData}
-                aria-label="Refresh the buoy chart"
-                title="Refresh chart"
-            >
-                ↻
-            </button>
+            <div class="observation-card__actions">
+                <div class="wave-summary" class:is-unavailable={!hasSelectedWaveReading}>
+                    <span>Significant waves</span>
+                    <strong>{formatWaveHeight(selectedReading)}</strong>
+                </div>
+                <button
+                    class="refresh-button"
+                    class:is-loading={imageLoading}
+                    type="button"
+                    on:click={refreshAllData}
+                    aria-label="Refresh the buoy chart and wave reading"
+                    title="Refresh chart and wave reading"
+                >
+                    ↻
+                </button>
+            </div>
         </header>
 
         <div class="chart-toolbar">
@@ -101,7 +108,11 @@
         </div>
 
         <footer class="observation-card__footer">
-            <span>Auto-refreshes every 10 minutes</span>
+            <span>
+                {readingsGeneratedAt
+                    ? `Wave reading updated ${formatCheckedAt(readingsGeneratedAt)}`
+                    : 'Wave readings refresh every 10 minutes'}
+            </span>
             <a href={selectedBuoy.chartUrl} target="_blank" rel="noreferrer">Open full chart ↗</a>
         </footer>
     </article>
@@ -126,9 +137,9 @@
     import { map } from '@windy/map';
     import { onDestroy, onMount } from 'svelte';
 
-    import { buoys, dhmzSourceUrl, networkCenter } from './buoys';
+    import { buoys, dhmzSourceUrl, networkCenter, waveReadingsUrl } from './buoys';
     import config from './pluginConfig';
-    import type { Buoy } from './buoys';
+    import type { Buoy, WaveReading, WaveReadingsPayload } from './buoys';
 
     const { title } = config;
     const refreshIntervalMs = 10 * 60 * 1000;
@@ -146,13 +157,30 @@
     let viewMode: 'fit' | 'full' = 'full';
     let refreshTimer: ReturnType<typeof setInterval> | null = null;
     let buoyMarkers: { buoy: Buoy; marker: L.Marker }[] = [];
+    let waveReadings: Record<string, WaveReading> = {};
+    let readingsGeneratedAt: Date | null = null;
+    let selectedReading: WaveReading | null = null;
+    let hasSelectedWaveReading = false;
 
     $: chartSrc = `${selectedBuoy.chartUrl}?windy-refresh=${chartVersion}`;
+    $: selectedReading = waveReadings[selectedBuoy.id] ?? null;
+    $: hasSelectedWaveReading =
+        selectedReading?.status === 'ok' && selectedReading.waveHeightM !== null;
 
     const formatCoordinate = (value: number, positive: string, negative: string) =>
         `${Math.abs(value).toFixed(4)}°${value >= 0 ? positive : negative}`;
 
     const formatCheckedAt = (date: Date) => checkedAtFormatter.format(date);
+
+    const formatWaveHeight = (reading: WaveReading | null | undefined, compact = false) => {
+        if (reading?.status !== 'ok' || reading.waveHeightM === null) {
+            return compact ? '— m' : 'No data';
+        }
+
+        return `${reading.waveHeightM.toFixed(1)}${compact ? '' : ' '}m`;
+    };
+
+    const waveReadingFor = (buoyId: string) => waveReadings[buoyId];
 
     const makeBuoyIcon = (buoy: Buoy, isSelected: boolean) =>
         new L.DivIcon({
@@ -162,11 +190,14 @@
                     <span class="dhmz-buoy-marker__core"></span>
                 </span>
                 <span class="dhmz-buoy-marker__label">
-                    <span class="dhmz-buoy-marker__arrow" aria-hidden="true">▲</span>
-                    <span>${buoy.name}</span>
+                    <span class="dhmz-buoy-marker__station">${buoy.name}</span>
+                    <span class="dhmz-buoy-marker__reading">
+                        <span class="dhmz-buoy-marker__arrow" aria-hidden="true">▲</span>
+                        <strong>${formatWaveHeight(waveReadingFor(buoy.id), true)}</strong>
+                    </span>
                 </span>`,
             iconAnchor: [28, 28],
-            iconSize: [128, 88],
+            iconSize: [140, 102],
         });
 
     const updateMarkerSelection = () => {
@@ -180,6 +211,56 @@
         imageLoading = true;
         lastChecked = new Date();
         chartVersion = Date.now();
+    };
+
+    const parseWaveReadings = (value: unknown): WaveReadingsPayload => {
+        const payload = value as Partial<WaveReadingsPayload>;
+        const normalized: Record<string, WaveReading> = {};
+
+        if (!payload || typeof payload.generatedAt !== 'string' || !payload.buoys) {
+            throw new Error('Invalid wave readings payload');
+        }
+
+        buoys.forEach(buoy => {
+            const reading = payload.buoys?.[buoy.id];
+            const height = reading?.waveHeightM;
+            const isValidHeight =
+                typeof height === 'number' && Number.isFinite(height) && height >= 0 && height <= 25;
+
+            normalized[buoy.id] =
+                reading?.status === 'ok' && isValidHeight
+                    ? { waveHeightM: height, status: 'ok' }
+                    : {
+                          waveHeightM: null,
+                          status: reading?.status === 'no-data' ? 'no-data' : 'error',
+                      };
+        });
+
+        return { generatedAt: payload.generatedAt, buoys: normalized };
+    };
+
+    const refreshWaveReadings = async () => {
+        try {
+            const response = await fetch(`${waveReadingsUrl}?windy-refresh=${Date.now()}`, {
+                cache: 'no-store',
+            });
+            if (!response.ok) {
+                throw new Error(`Wave readings request failed with ${response.status}`);
+            }
+
+            const payload = parseWaveReadings(await response.json());
+            const generatedAt = new Date(payload.generatedAt);
+            waveReadings = payload.buoys;
+            readingsGeneratedAt = Number.isNaN(generatedAt.getTime()) ? null : generatedAt;
+            updateMarkerSelection();
+        } catch (error) {
+            console.warn('DHMZ wave readings are temporarily unavailable', error);
+        }
+    };
+
+    const refreshAllData = () => {
+        refreshData();
+        void refreshWaveReadings();
     };
 
     const selectBuoy = (buoy: Buoy, focusMap = true) => {
@@ -234,11 +315,12 @@
     export const onopen = () => {
         addBuoyMarkers();
         showAllBuoys();
-        refreshData();
+        refreshAllData();
     };
 
     onMount(() => {
-        refreshTimer = setInterval(refreshData, refreshIntervalMs);
+        void refreshWaveReadings();
+        refreshTimer = setInterval(refreshAllData, refreshIntervalMs);
     });
 
     onDestroy(() => {
@@ -409,6 +491,47 @@
                 font-weight: 700;
                 text-decoration: none;
             }
+        }
+
+        &__actions {
+            display: flex;
+            flex: 0 0 auto;
+            align-items: center;
+            gap: 9px;
+        }
+    }
+
+    .wave-summary {
+        min-width: 94px;
+        padding: 7px 10px;
+        border: 1px solid #a8d7df;
+        border-radius: 10px;
+        background: white;
+        text-align: right;
+
+        span,
+        strong {
+            display: block;
+        }
+
+        span {
+            color: var(--ink-muted);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        strong {
+            margin-top: 2px;
+            color: var(--sea);
+            font-size: 19px;
+            line-height: 1;
+        }
+
+        &.is-unavailable strong {
+            color: var(--ink-muted);
+            font-size: 14px;
         }
     }
 
@@ -593,8 +716,8 @@
 
     :global(.dhmz-buoy-marker) {
         position: relative;
-        width: 128px !important;
-        height: 88px !important;
+        width: 140px !important;
+        height: 102px !important;
         border: 0;
         background: transparent;
         filter: drop-shadow(0 5px 8px rgba(7, 45, 65, 0.26));
@@ -654,11 +777,13 @@
         left: 18px;
         display: inline-flex;
         min-width: 88px;
-        min-height: 36px;
+        min-height: 48px;
         box-sizing: border-box;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 10px 6px 9px;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 3px;
+        padding: 6px 11px 7px 10px;
         border: 2px solid rgba(255, 255, 255, 0.72);
         border-radius: 12px;
         background: linear-gradient(145deg, #2f8daf, #237495);
@@ -671,6 +796,30 @@
         transition:
             background 0.18s ease,
             transform 0.18s ease;
+    }
+
+    :global(.dhmz-buoy-marker__station) {
+        max-width: 108px;
+        overflow: hidden;
+        color: #d9fbff;
+        font-size: 9px;
+        font-weight: 750;
+        letter-spacing: 0.07em;
+        line-height: 1;
+        text-overflow: ellipsis;
+        text-transform: uppercase;
+    }
+
+    :global(.dhmz-buoy-marker__reading) {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+
+        strong {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
     }
 
     :global(.dhmz-buoy-marker__arrow) {

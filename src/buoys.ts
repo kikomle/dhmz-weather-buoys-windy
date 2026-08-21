@@ -7,6 +7,16 @@ export interface Buoy {
     chartUrl: string;
 }
 
+export interface WaveReading {
+    waveHeightM: number | null;
+    status: 'ok' | 'no-data' | 'error';
+}
+
+export interface WaveReadingsPayload {
+    generatedAt: string;
+    buoys: Record<string, WaveReading>;
+}
+
 const chartBaseUrl = 'https://vrijeme.hr/plutace';
 
 // WGS84 positions and mooring depths published for the Croatian state
@@ -58,3 +68,6 @@ export const networkCenter = { lat: 43.45, lon: 16.2 };
 
 export const dhmzSourceUrl =
     'https://meteo.hr/podaci_e.php?section=podaci_vrijeme&param=mop';
+
+export const waveReadingsUrl =
+    'https://kikomle.github.io/dhmz-weather-buoys-windy/buoy-readings.json';

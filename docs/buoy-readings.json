@@ -1,0 +1,50 @@
+{
+  "generatedAt": "2026-08-21T10:21:14Z",
+  "method": "latest blue significant-wave-height curve point extracted from the DHMZ chart image",
+  "buoys": {
+    "Kvarner": {
+      "waveHeightM": 0.6,
+      "status": "ok",
+      "confidence": "high",
+      "latestPointX": 778,
+      "sourceUrl": "https://vrijeme.hr/plutace/plutaca-Kvarner-en.png",
+      "chartUpdatedAt": null,
+      "extractedAt": "2026-08-21T10:21:14Z"
+    },
+    "Blitvenica": {
+      "waveHeightM": 1.2,
+      "status": "ok",
+      "confidence": "high",
+      "latestPointX": 701,
+      "sourceUrl": "https://vrijeme.hr/plutace/plutaca-Blitvenica-en.png",
+      "chartUpdatedAt": null,
+      "extractedAt": "2026-08-21T10:21:14Z"
+    },
+    "Viski_kanal": {
+      "waveHeightM": 0.6,
+      "status": "ok",
+      "confidence": "high",
+      "latestPointX": 788,
+      "sourceUrl": "https://vrijeme.hr/plutace/plutaca-Viski_kanal-en.png",
+      "chartUpdatedAt": null,
+      "extractedAt": "2026-08-21T10:21:14Z"
+    },
+    "Palagruza": {
+      "waveHeightM": null,
+      "status": "no-data",
+      "confidence": "high",
+      "sourceUrl": "https://vrijeme.hr/plutace/plutaca-Palagruza-en.png",
+      "chartUpdatedAt": null,
+      "extractedAt": "2026-08-21T10:21:14Z"
+    },
+    "Molunat": {
+      "waveHeightM": 0.6,
+      "status": "ok",
+      "confidence": "high",
+      "latestPointX": 784,
+      "sourceUrl": "https://vrijeme.hr/plutace/plutaca-Molunat-en.png",
+      "chartUpdatedAt": null,
+      "extractedAt": "2026-08-21T10:21:14Z"
+    }
+  }
+}
